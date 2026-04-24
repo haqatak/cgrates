@@ -246,6 +246,7 @@ type EventReaderOptsJson struct {
 	CSVFieldSeparator        *string   `json:"csvFieldSeparator"`
 	CSVHeaderDefineChar      *string   `json:"csvHeaderDefineChar"`
 	CSVLazyQuotes            *bool     `json:"csvLazyQuotes"`
+	CSVTrimLeadingSpace      *bool     `json:"csvTrimLeadingSpace"`
 	XMLRootPath              *string   `json:"xmlRootPath"`
 	AMQPQueueID              *string   `json:"amqpQueueID"`
 	AMQPUsername             *string   `json:"amqpUsername"`

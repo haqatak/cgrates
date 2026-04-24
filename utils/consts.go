@@ -3085,6 +3085,7 @@ const (
 	CSVRowLengthOpt     = "csvRowLength"
 	CSVFieldSepOpt      = "csvFieldSeparator"
 	CSVLazyQuotes       = "csvLazyQuotes"
+	CSVTrimLeadingSpace = "csvTrimLeadingSpace"
 	HeaderDefineCharOpt = "csvHeaderDefineChar"
 
 	// fileXML
