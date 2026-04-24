@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 package ees
 
 import (
-	"crypto/tls"
 	"net/http"
 	"sync"
 
@@ -53,6 +52,7 @@ type SQSee struct {
 	queueID        string
 	forcePathStyle bool
 	skipTlsVerify  bool
+	caPath         string
 	session        *session.Session
 	svc            *sqs.SQS
 
@@ -87,6 +87,9 @@ func (pstr *SQSee) parseOpts(opts *config.EventExporterOpts) {
 		if sqsOpts.SQSSkipTlsVerify != nil {
 			pstr.skipTlsVerify = *sqsOpts.SQSSkipTlsVerify
 		}
+		if sqsOpts.SQSCAPath != nil {
+			pstr.caPath = *sqsOpts.SQSCAPath
+		}
 	}
 }
 
@@ -107,7 +110,11 @@ func (pstr *SQSee) Connect() (err error) {
 		if pstr.forcePathStyle {
 			cfg.S3ForcePathStyle = aws.Bool(true) // Required for custom S3-compatible endpoints
 		}
-		if pstr.skipTlsVerify {
+		if pstr.skipTlsVerify || pstr.caPath != "" {
+			tlsCfg, err := buildTLSConfig(utils.StringPointer(pstr.caPath), utils.BoolPointer(pstr.skipTlsVerify))
+			if err != nil {
+				return err
+			}
 			cfg.HTTPClient = &http.Client{
 				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{

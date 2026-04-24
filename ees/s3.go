@@ -20,7 +20,6 @@ package ees
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"sync"
@@ -54,6 +53,7 @@ type S3EE struct {
 	folderPath     string
 	forcePathStyle bool
 	skipTlsVerify  bool
+	caPath         string
 	session        *session.Session
 	up             *s3manager.Uploader
 
@@ -91,6 +91,9 @@ func (pstr *S3EE) parseOpts(opts *config.EventExporterOpts) {
 		if s3Opts.S3SkipTlsVerify != nil {
 			pstr.skipTlsVerify = *s3Opts.S3SkipTlsVerify
 		}
+		if s3Opts.S3CAPath != nil {
+			pstr.caPath = *s3Opts.S3CAPath
+		}
 	}
 }
 
@@ -111,7 +114,11 @@ func (pstr *S3EE) Connect() (err error) {
 		if pstr.forcePathStyle {
 			cfg.S3ForcePathStyle = aws.Bool(true) // Required for custom S3-compatible endpoints
 		}
-		if pstr.skipTlsVerify {
+		if pstr.skipTlsVerify || pstr.caPath != "" {
+			tlsCfg, err := buildTLSConfig(utils.StringPointer(pstr.caPath), utils.BoolPointer(pstr.skipTlsVerify))
+			if err != nil {
+				return err
+			}
 			cfg.HTTPClient = &http.Client{
 				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{

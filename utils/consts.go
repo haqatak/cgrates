@@ -3059,12 +3059,14 @@ const (
 	SQSQueueID        = "sqsQueueID"
 	SQSForcePathStyle = "sqsForcePathStyle"
 	SQSSkipTlsVerify  = "sqsSkipTlsVerify"
+	SQSCAPath         = "sqsCAPath"
 
 	// s3
 	S3Bucket         = "s3BucketID"
 	S3FolderPath     = "s3FolderPath"
 	S3ForcePathStyle = "s3ForcePathStyle"
 	S3SkipTlsVerify  = "s3SkipTlsVerify"
+	S3CAPath          = "s3CAPath"
 
 	// sql
 	SQLDefaultDBName  = "cgrates"

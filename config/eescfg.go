@@ -228,10 +228,12 @@ type AWSOpts struct {
 	SQSQueueID        *string
 	SQSForcePathStyle *bool
 	SQSSkipTlsVerify  *bool
+	SQSCAPath         *string
 	S3BucketID        *string
 	S3FolderPath      *string
 	S3ForcePathStyle  *bool
 	S3SkipTlsVerify   *bool
+	S3CAPath          *string
 }
 
 type NATSOpts struct {
@@ -508,6 +510,9 @@ func (awsOpts *AWSOpts) loadFromJSONCfg(jsnCfg *EventExporterOptsJson) (err erro
 	if jsnCfg.SQSSkipTlsVerify != nil {
 		awsOpts.SQSSkipTlsVerify = jsnCfg.SQSSkipTlsVerify
 	}
+	if jsnCfg.SQSCAPath != nil {
+		awsOpts.SQSCAPath = jsnCfg.SQSCAPath
+	}
 	if jsnCfg.S3BucketID != nil {
 		awsOpts.S3BucketID = jsnCfg.S3BucketID
 	}
@@ -519,6 +524,9 @@ func (awsOpts *AWSOpts) loadFromJSONCfg(jsnCfg *EventExporterOptsJson) (err erro
 	}
 	if jsnCfg.S3SkipTlsVerify != nil {
 		awsOpts.S3SkipTlsVerify = jsnCfg.S3SkipTlsVerify
+	}
+	if jsnCfg.S3CAPath != nil {
+		awsOpts.S3CAPath = jsnCfg.S3CAPath
 	}
 	return
 }
@@ -949,6 +957,10 @@ func (awsOpts *AWSOpts) Clone() *AWSOpts {
 		cln.SQSSkipTlsVerify = new(bool)
 		*cln.SQSSkipTlsVerify = *awsOpts.SQSSkipTlsVerify
 	}
+	if awsOpts.SQSCAPath != nil {
+		cln.SQSCAPath = new(string)
+		*cln.SQSCAPath = *awsOpts.SQSCAPath
+	}
 	if awsOpts.S3BucketID != nil {
 		cln.S3BucketID = new(string)
 		*cln.S3BucketID = *awsOpts.S3BucketID
@@ -964,6 +976,10 @@ func (awsOpts *AWSOpts) Clone() *AWSOpts {
 	if awsOpts.S3SkipTlsVerify != nil {
 		cln.S3SkipTlsVerify = new(bool)
 		*cln.S3SkipTlsVerify = *awsOpts.S3SkipTlsVerify
+	}
+	if awsOpts.S3CAPath != nil {
+		cln.S3CAPath = new(string)
+		*cln.S3CAPath = *awsOpts.S3CAPath
 	}
 	return cln
 }
@@ -1298,6 +1314,9 @@ func (eeC *EventExporterCfg) AsMapInterface(separator string) (initialMP map[str
 		if awsOpts.SQSSkipTlsVerify != nil {
 			opts[utils.SQSSkipTlsVerify] = *awsOpts.SQSSkipTlsVerify
 		}
+		if awsOpts.SQSCAPath != nil {
+			opts[utils.SQSCAPath] = *awsOpts.SQSCAPath
+		}
 		if awsOpts.S3BucketID != nil {
 			opts[utils.S3Bucket] = *awsOpts.S3BucketID
 		}
@@ -1309,6 +1328,9 @@ func (eeC *EventExporterCfg) AsMapInterface(separator string) (initialMP map[str
 		}
 		if awsOpts.S3SkipTlsVerify != nil {
 			opts[utils.S3SkipTlsVerify] = *awsOpts.S3SkipTlsVerify
+		}
+		if awsOpts.S3CAPath != nil {
+			opts[utils.S3CAPath] = *awsOpts.S3CAPath
 		}
 	}
 	if natOpts := eeC.Opts.NATS; natOpts != nil {
