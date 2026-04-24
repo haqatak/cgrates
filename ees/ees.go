@@ -19,7 +19,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 package ees
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -431,4 +435,27 @@ func (eeS *EventExporterS) V1ResetExporterMetrics(ctx *context.Context, params V
 	ee.(EventExporter).GetMetrics().Reset()
 	*reply = utils.OK
 	return nil
+}
+
+func buildTLSConfig(caPath *string, skipVerify *bool) (*tls.Config, error) {
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+	if caPath != nil && *caPath != "" {
+		ca, err := os.ReadFile(*caPath)
+		if err != nil {
+			return nil, err
+		}
+		if !rootCAs.AppendCertsFromPEM(ca) {
+			return nil, errors.New("failed to append certificates from PEM file")
+		}
+	}
+	return &tls.Config{
+		RootCAs:            rootCAs,
+		InsecureSkipVerify: skipVerify != nil && *skipVerify,
+	}, nil
 }

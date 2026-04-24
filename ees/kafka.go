@@ -19,10 +19,6 @@ package ees
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"errors"
-	"os"
 	"time"
 
 	"github.com/cgrates/cgrates/config"
@@ -114,26 +110,3 @@ func (k *KafkaEE) Close() error {
 }
 
 func (k *KafkaEE) GetMetrics() *utils.ExporterMetrics { return k.em }
-
-func buildTLSConfig(caPath *string, skipVerify *bool) (*tls.Config, error) {
-	rootCAs, err := x509.SystemCertPool()
-	if err != nil {
-		return nil, err
-	}
-	if rootCAs == nil {
-		rootCAs = x509.NewCertPool()
-	}
-	if caPath != nil && *caPath != "" {
-		ca, err := os.ReadFile(*caPath)
-		if err != nil {
-			return nil, err
-		}
-		if !rootCAs.AppendCertsFromPEM(ca) {
-			return nil, errors.New("failed to append certificates from PEM file")
-		}
-	}
-	return &tls.Config{
-		RootCAs:            rootCAs,
-		InsecureSkipVerify: skipVerify != nil && *skipVerify,
-	}, nil
-}

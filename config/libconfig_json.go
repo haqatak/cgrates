@@ -375,10 +375,12 @@ type EventExporterOptsJson struct {
 	SQSQueueID                  *string           `json:"sqsQueueID"`
 	SQSForcePathStyle           *bool             `json:"sqsForcePathStyle"`
 	SQSSkipTlsVerify            *bool             `json:"sqsSkipTlsVerify"`
+	SQSCAPath                   *string           `json:"sqsCAPath"`
 	S3BucketID                  *string           `json:"s3BucketID"`
 	S3FolderPath                *string           `json:"s3FolderPath"`
 	S3ForcePathStyle            *bool             `json:"s3ForcePathStyle"`
 	S3SkipTlsVerify             *bool             `json:"s3SkipTlsVerify"`
+	S3CAPath                    *string           `json:"s3CAPath"`
 	NATSJetStream               *bool             `json:"natsJetStream"`
 	NATSSubject                 *string           `json:"natsSubject"`
 	NATSJWTFile                 *string           `json:"natsJWTFile"`
