@@ -364,6 +364,7 @@ type CSVROpts struct {
 	FieldSeparator           *string
 	HeaderDefineChar         *string
 	LazyQuotes               *bool
+	TrimLeadingSpace         *bool
 }
 
 func (csvROpts *CSVROpts) loadFromJSONCfg(jsnCfg *EventReaderOptsJson) (err error) {
@@ -381,6 +382,9 @@ func (csvROpts *CSVROpts) loadFromJSONCfg(jsnCfg *EventReaderOptsJson) (err erro
 	}
 	if jsnCfg.CSVLazyQuotes != nil {
 		csvROpts.LazyQuotes = jsnCfg.CSVLazyQuotes
+	}
+	if jsnCfg.CSVTrimLeadingSpace != nil {
+		csvROpts.TrimLeadingSpace = jsnCfg.CSVTrimLeadingSpace
 	}
 	return
 }
@@ -620,6 +624,10 @@ func (csvOpts *CSVROpts) Clone() *CSVROpts {
 	if csvOpts.LazyQuotes != nil {
 		cln.LazyQuotes = new(bool)
 		*cln.LazyQuotes = *csvOpts.LazyQuotes
+	}
+	if csvOpts.TrimLeadingSpace != nil {
+		cln.TrimLeadingSpace = new(bool)
+		*cln.TrimLeadingSpace = *csvOpts.TrimLeadingSpace
 	}
 	return cln
 }
@@ -872,6 +880,9 @@ func (er *EventReaderCfg) AsMapInterface(separator string) (initialMP map[string
 		}
 		if csvOpts.LazyQuotes != nil {
 			opts[utils.CSVLazyQuotes] = *csvOpts.LazyQuotes
+		}
+		if csvOpts.TrimLeadingSpace != nil {
+			opts[utils.CSVTrimLeadingSpace] = *csvOpts.TrimLeadingSpace
 		}
 	}
 	if er.Opts.XMLRootPath != nil {

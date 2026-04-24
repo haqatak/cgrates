@@ -152,6 +152,9 @@ func (rdr *CSVFileER) processFile(fName string) (err error) {
 	if rdr.Config().Opts.CSV.LazyQuotes != nil {
 		csvReader.LazyQuotes = *rdr.Config().Opts.CSV.LazyQuotes
 	}
+	if rdr.Config().Opts.CSV.TrimLeadingSpace != nil {
+		csvReader.TrimLeadingSpace = *rdr.Config().Opts.CSV.TrimLeadingSpace
+	}
 
 	var indxAls map[string]int
 	rowNr := 0 // This counts the rows in the file, not really number of CDRs
