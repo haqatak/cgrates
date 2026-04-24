@@ -111,7 +111,7 @@ func (pstr *SQSee) Connect() (err error) {
 			cfg.HTTPClient = &http.Client{
 				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true, // Equivalent to verify=False for self-signed certificates
+						InsecureSkipVerify: pstr.skipTlsVerify, // Equivalent to verify=False for self-signed certificates
 					},
 				},
 			}
