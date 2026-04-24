@@ -62,7 +62,7 @@ func (sqls *SQLStorage) Flush(scriptsPath string) (err error) {
 			return err
 		}
 	}
-	if _, err := sqls.Db.Query(fmt.Sprintf("SELECT 1 FROM %s", utils.CDRsTBL)); err != nil {
+	if err := sqls.db.Table(utils.CDRsTBL).Select("1").Limit(1).Find(&[]int{}).Error; err != nil {
 		return err
 	}
 	return nil
