@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGRateS Admin UI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding-top: 20px; background-color: #f8f9fa; }
+        .card { margin-bottom: 20px; box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
+        .output-box {
+            background-color: #212529;
+            color: #20c997;
+            font-family: monospace;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .navbar-brand { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">CGRateS Admin Dashboard</a>
+  </div>
+</nav>
+
+<div class="container mt-5">
+    <div class="row">
+        <!-- Sidebar / Configuration -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Connection Settings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="rpcUrl" class="form-label">JSON-RPC Endpoint</label>
+                        <input type="text" class="form-control" id="rpcUrl" value="/jsonrpc">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">System Diagnostics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-dark" onclick="sendRpc('APIerSv1.Ping', [{}])">Ping Server</button>
+                        <button class="btn btn-outline-dark" onclick="sendRpc('APIerSv1.GetStatsIndexesHealth', [{}])">Stats Indexes Health</button>
+                        <button class="btn btn-outline-dark" onclick="sendRpc('APIerSv1.GetStorDBVersions', [{}])">StorDB Versions</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- Account Management -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Account Management</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="myTab" role="tablist">
+                      <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="get-account-tab" data-bs-toggle="tab" data-bs-target="#get-account" type="button" role="tab">Get Account</button>
+                      </li>
+                      <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="add-balance-tab" data-bs-toggle="tab" data-bs-target="#add-balance" type="button" role="tab">Add Balance</button>
+                      </li>
+                    </ul>
+                    <div class="tab-content pt-3" id="myTabContent">
+                      <!-- Get Account -->
+                      <div class="tab-pane fade show active" id="get-account" role="tabpanel">
+                          <form id="getAccountForm">
+                              <div class="row mb-3">
+                                  <div class="col">
+                                      <input type="text" class="form-control" id="getAccTenant" placeholder="Tenant (e.g. cgrates.org)" required>
+                                  </div>
+                                  <div class="col">
+                                      <input type="text" class="form-control" id="getAccAccount" placeholder="Account ID" required>
+                                  </div>
+                              </div>
+                              <button type="submit" class="btn btn-success">Fetch Account</button>
+                          </form>
+                      </div>
+
+                      <!-- Add Balance -->
+                      <div class="tab-pane fade" id="add-balance" role="tabpanel">
+                           <form id="addBalanceForm">
+                              <div class="row mb-3">
+                                  <div class="col">
+                                      <input type="text" class="form-control" id="addBalTenant" placeholder="Tenant" required>
+                                  </div>
+                                  <div class="col">
+                                      <input type="text" class="form-control" id="addBalAccount" placeholder="Account ID" required>
+                                  </div>
+                              </div>
+                              <div class="row mb-3">
+                                  <div class="col">
+                                      <input type="text" class="form-control" id="addBalType" placeholder="Balance Type (e.g. *monetary)" required>
+                                  </div>
+                                  <div class="col">
+                                      <input type="number" step="0.01" class="form-control" id="addBalValue" placeholder="Value" required>
+                                  </div>
+                              </div>
+                              <button type="submit" class="btn btn-success">Add Balance</button>
+                          </form>
+                      </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Window -->
+            <div class="card">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">API Response</h5>
+                    <button class="btn btn-sm btn-light" onclick="clearOutput()">Clear</button>
+                </div>
+                <div class="card-body p-0">
+                    <div id="output" class="output-box">Ready for commands...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function clearOutput() {
+        document.getElementById('output').textContent = 'Ready for commands...';
+    }
+
+    function appendOutput(title, data) {
+        const out = document.getElementById('output');
+        const timestamp = new Date().toLocaleTimeString();
+        const header = `\n--- [${timestamp}] ${title} ---\n`;
+        let body = "";
+
+        if (data && data.error) {
+            body = `ERROR: ${data.error.message || JSON.stringify(data.error)}`;
+        } else if (data && data.result !== undefined) {
+            body = JSON.stringify(data.result, null, 2);
+        } else {
+            body = JSON.stringify(data, null, 2);
+        }
+
+        if (out.textContent === 'Ready for commands...') {
+            out.textContent = header + body;
+        } else {
+            out.textContent = header + body + "\n" + out.textContent;
+        }
+    }
+
+    async function sendRpc(method, params = []) {
+        const url = document.getElementById('rpcUrl').value;
+        const payload = {
+            jsonrpc: "2.0",
+            method: method,
+            params: params,
+            id: Date.now()
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            appendOutput(method, data);
+        } catch (error) {
+            appendOutput(method, { error: error.message });
+        }
+    }
+
+    // Form Submissions
+    document.getElementById('getAccountForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const tenant = document.getElementById('getAccTenant').value;
+        const account = document.getElementById('getAccAccount').value;
+        sendRpc('APIerSv1.GetAccount', [{ Tenant: tenant, Account: account }]);
+    });
+
+    document.getElementById('addBalanceForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const tenant = document.getElementById('addBalTenant').value;
+        const account = document.getElementById('addBalAccount').value;
+        const balType = document.getElementById('addBalType').value;
+        const value = parseFloat(document.getElementById('addBalValue').value);
+
+        sendRpc('APIerSv1.SetBalance', [{
+            Tenant: tenant,
+            Account: account,
+            BalanceType: balType,
+            Value: value
+        }]);
+    });
+</script>
+</body>
+</html>
