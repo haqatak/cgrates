@@ -121,9 +121,7 @@ func (pstr *S3EE) Connect() (err error) {
 			}
 			cfg.HTTPClient = &http.Client{
 				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: pstr.skipTlsVerify, // Equivalent to verify=False for self-signed certificates
-					},
+					TLSClientConfig: tlsCfg,
 				},
 			}
 		}
