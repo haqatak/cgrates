@@ -174,30 +174,34 @@ func (sqls *SQLStorage) GetTpIds(colName string) ([]string, error) {
 // ToDo: TEST
 func (sqls *SQLStorage) GetTpTableIds(tpid, table string, distinct utils.TPDistinctIds,
 	filters map[string]string, pagination *utils.PaginatorWithSearch) ([]string, error) {
-	qry := fmt.Sprintf("SELECT DISTINCT %s FROM %s where tpid='%s'", distinct, table, tpid)
+	tx := sqls.db.Table(table).Select("DISTINCT " + distinct.String()).Where("tpid = ?", tpid)
 	for key, value := range filters {
 		if key != "" && value != "" {
-			qry += fmt.Sprintf(" AND %s='%s'", key, value)
+				tx = tx.Where(map[string]interface{}{key: value})
 		}
 	}
 	if pagination != nil {
 		if len(pagination.Search) != 0 {
-			qry += fmt.Sprintf(" AND (%s LIKE '%%%s%%'", distinct[0], pagination.Search)
-			for _, d := range distinct[1:] {
-				qry += fmt.Sprintf(" OR %s LIKE '%%%s%%'", d, pagination.Search)
+			var orConditions []string
+			var orValues []interface{}
+			for _, d := range distinct {
+					// The distinct keys are internal constants from utils.TPDistinctIds, so they are safe to use
+					// without backticks (which break postgres).
+					orConditions = append(orConditions, fmt.Sprintf("%s LIKE ?", d))
+				orValues = append(orValues, "%"+pagination.Search+"%")
 			}
-			qry += ")"
+			tx = tx.Where(strings.Join(orConditions, " OR "), orValues...)
 		}
 		if pagination.Paginator != nil {
 			if pagination.Limit != nil { // Keep Postgres compatibility by adding offset only when limit defined
-				qry += fmt.Sprintf(" LIMIT %d", *pagination.Limit)
+				tx = tx.Limit(*pagination.Limit)
 				if pagination.Offset != nil {
-					qry += fmt.Sprintf(" OFFSET %d", *pagination.Offset)
+					tx = tx.Offset(*pagination.Offset)
 				}
 			}
 		}
 	}
-	rows, err := sqls.Db.Query(qry)
+	rows, err := tx.Rows()
 	if err != nil {
 		return nil, err
 	}
