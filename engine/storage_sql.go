@@ -911,7 +911,7 @@ func (sqls *SQLStorage) GetSMCosts(cgrid, runid, originHost, originIDPrefix stri
 	}
 	q := sqls.db.Where(filter)
 	if originIDPrefix != "" {
-		q = sqls.db.Where(filter).Where(fmt.Sprintf("origin_id LIKE '%s%%'", originIDPrefix))
+		q = sqls.db.Where(filter).Where("origin_id LIKE ?", originIDPrefix+"%")
 	}
 	results := make([]*SessionCostsSQL, 0)
 	if err := q.Find(&results).Error; err != nil {
@@ -1200,7 +1200,7 @@ func (sqls *SQLStorage) GetCDRs(qryFltr *utils.CDRsFilter, remove bool) ([]*CDR,
 		if *qryFltr.MaxCost == -1.0 { // Non-rated CDRs
 			q = q.Where("cost IS NULL") // Need to include it otherwise all CDRs will be returned
 		} else { // Above limited CDRs, since MinCost is empty, make sure we query also NULL cost
-			q = q.Where(fmt.Sprintf("( cost IS NULL OR cost < %f )", *qryFltr.MaxCost))
+			q = q.Where("( cost IS NULL OR cost < ? )", *qryFltr.MaxCost)
 		}
 	}
 	if qryFltr.Paginator.Limit != nil {
