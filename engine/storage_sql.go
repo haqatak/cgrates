@@ -1052,27 +1052,23 @@ func (sqls *SQLStorage) GetCDRs(qryFltr *utils.CDRsFilter, remove bool) ([]*CDR,
 	if len(qryFltr.NotSubjects) != 0 {
 		q = q.Where("subject not in (?)", qryFltr.NotSubjects)
 	}
-	if len(qryFltr.DestinationPrefixes) != 0 { // A bit ugly but still more readable than scopes provided by gorm
-		qIds := bytes.NewBufferString("(")
-		for idx, destPrefix := range qryFltr.DestinationPrefixes {
-			if idx != 0 {
-				qIds.WriteString(" OR")
-			}
-			qIds.WriteString(fmt.Sprintf(" destination LIKE '%s%%'", destPrefix))
+	if len(qryFltr.DestinationPrefixes) != 0 {
+		var orConditions []string
+		var orValues []interface{}
+		for _, destPrefix := range qryFltr.DestinationPrefixes {
+			orConditions = append(orConditions, "destination LIKE ?")
+			orValues = append(orValues, destPrefix+"%")
 		}
-		qIds.WriteString(" )")
-		q = q.Where(qIds.String())
+		q = q.Where(strings.Join(orConditions, " OR "), orValues...)
 	}
-	if len(qryFltr.NotDestinationPrefixes) != 0 { // A bit ugly but still more readable than scopes provided by gorm
-		qIds := bytes.NewBufferString("(")
-		for idx, destPrefix := range qryFltr.NotDestinationPrefixes {
-			if idx != 0 {
-				qIds.WriteString(" AND")
-			}
-			qIds.WriteString(fmt.Sprintf(" destination not LIKE '%s%%'", destPrefix))
+	if len(qryFltr.NotDestinationPrefixes) != 0 {
+		var andConditions []string
+		var andValues []interface{}
+		for _, destPrefix := range qryFltr.NotDestinationPrefixes {
+			andConditions = append(andConditions, "destination not LIKE ?")
+			andValues = append(andValues, destPrefix+"%")
 		}
-		qIds.WriteString(" )")
-		q = q.Where(qIds.String())
+		q = q.Where(strings.Join(andConditions, " AND "), andValues...)
 	}
 	if len(qryFltr.Costs) != 0 {
 		q = q.Where(utils.CDRsTBL+".cost in (?)", qryFltr.Costs)
