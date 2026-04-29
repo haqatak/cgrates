@@ -61,6 +61,9 @@ type SQLEe struct {
 type sqlPosterRequest struct {
 	Querry string
 	Values []any
+	Create map[string]interface{}
+	Update map[string]interface{}
+	Where  map[string]interface{}
 }
 
 func (sqlEe *SQLEe) initDialector() (err error) {
@@ -142,6 +145,12 @@ func (sqlEe *SQLEe) ExportEvent(req any, _ string) error {
 		return utils.ErrDisconnected
 	}
 	sReq := req.(*sqlPosterRequest)
+	if sReq.Create != nil {
+		return sqlEe.db.Table(sqlEe.tableName).Create(sReq.Create).Error
+	}
+	if sReq.Update != nil && sReq.Where != nil {
+		return sqlEe.db.Table(sqlEe.tableName).Where(sReq.Where).Updates(sReq.Update).Error
+	}
 	return sqlEe.db.Table(sqlEe.tableName).Exec(sReq.Querry, sReq.Values...).Error
 }
 
@@ -160,37 +169,30 @@ func (sqlEe *SQLEe) GetMetrics() *utils.ExporterMetrics { return sqlEe.em }
 
 // Create the sqlPosterRequest used to instert the map into the table
 func (sqlEe *SQLEe) PrepareMap(cgrEv *utils.CGREvent) (any, error) {
-	colNames := make([]string, 0, len(cgrEv.Event)) // slice with all column names to be insterted
-	vals := make([]any, 0, len(cgrEv.Event))        // slice with all values to be insterted
-	for colName, value := range cgrEv.Event {
-		colNames = append(colNames, colName)
-		vals = append(vals, value)
+	if len(cgrEv.Event) == 0 {
+		return &sqlPosterRequest{
+			Querry: fmt.Sprintf("INSERT INTO %s (``) VALUES ();", sqlEe.tableName),
+			Values: []any{},
+		}, nil
 	}
-	sqlValues := make([]string, len(vals)) // values to be inserted as "?" for the query
-	for i := range vals {
-		sqlValues[i] = "?"
-	}
-	sqlQuery := fmt.Sprintf("INSERT INTO %s (`%s`) VALUES (%s);",
-		sqlEe.tableName,
-		strings.Join(colNames, "`, `"), // back ticks added to include special characters
-		strings.Join(sqlValues, ","),
-	)
 	return &sqlPosterRequest{
-		Querry: sqlQuery,
-		Values: vals,
+		Create: cgrEv.Event,
 	}, nil
 }
 
 func (sqlEe *SQLEe) PrepareOrderMap(mp *utils.OrderedNavigableMap) (any, error) {
+	createMap := make(map[string]interface{})
 	var vals []any
 	var colNames []string
 	var whereVars []string // key-value parts of WHERE clause used on UPDATE
 	var whereVals []any    // will hold the values replacing "?" used on WHERE part of UPDATE query
+	whereMap := make(map[string]interface{})
 	for el := mp.GetFirstElement(); el != nil; el = el.Next() {
 		nmIt, _ := mp.Field(el.Value)
 		pathWithoutIndex := strings.Join(utils.StripTrailingIndex(el.Value), utils.NestingSep)
 		if pathWithoutIndex != utils.MetaRow {
 			colNames = append(colNames, pathWithoutIndex)
+			createMap[pathWithoutIndex] = nmIt.Data
 		}
 		vals = append(vals, nmIt.Data)
 		if sqlEe.cfg.Opts.SQL.UpdateIndexedFields != nil {
@@ -198,44 +200,37 @@ func (sqlEe *SQLEe) PrepareOrderMap(mp *utils.OrderedNavigableMap) (any, error) 
 				if pathWithoutIndex == updateFields {
 					whereVars = append(whereVars, fmt.Sprintf("%s = ?", updateFields))
 					whereVals = append(whereVals, nmIt.Data)
+					whereMap[updateFields] = nmIt.Data
 				}
 			}
 		}
 	}
-	sqlValues := make([]string, len(vals)+len(whereVals))
-	for i := range vals {
-		sqlValues[i] = "?"
-	}
-	var sqlQuery string
 	if sqlEe.cfg.Opts.SQL.UpdateIndexedFields != nil {
 		if len(whereVars) == 0 {
 			return nil, fmt.Errorf("%w: no usable sqlUpdateIndexedFields found <%v>", utils.ErrNotFound, *sqlEe.cfg.Opts.SQL.UpdateIndexedFields)
 		}
-		setClauses := []string{} // used in SET part of UPDATE query
-		for _, col := range colNames {
-			setClauses = append(setClauses, fmt.Sprintf("%s = ?", col))
-		}
-		sqlQuery = fmt.Sprintf("UPDATE %s SET %s WHERE %s;",
-			sqlEe.tableName,
-			strings.Join(setClauses, ", "),
-			strings.Join(whereVars, " AND "))
-		for _, val := range whereVals {
-			vals = append(vals, val)
-		}
+		return &sqlPosterRequest{
+			Update: createMap,
+			Where:  whereMap,
+		}, nil
 	} else {
 		if len(colNames) != len(vals) {
-			sqlQuery = fmt.Sprintf("INSERT INTO %s VALUES (%s); ",
+			// This branch handles cases where no keys were appended to colNames
+			sqlValues := make([]string, len(vals))
+			for i := range vals {
+				sqlValues[i] = "?"
+			}
+			sqlQuery := fmt.Sprintf("INSERT INTO %s VALUES (%s); ",
 				sqlEe.tableName,
 				strings.Join(sqlValues, ","))
+			return &sqlPosterRequest{
+				Querry: sqlQuery,
+				Values: vals,
+			}, nil
 		} else {
-			sqlQuery = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s); ",
-				sqlEe.tableName,
-				strings.Join(colNames, ", "),
-				strings.Join(sqlValues, ","))
+			return &sqlPosterRequest{
+				Create: createMap,
+			}, nil
 		}
 	}
-	return &sqlPosterRequest{
-		Querry: sqlQuery,
-		Values: vals,
-	}, nil
 }
