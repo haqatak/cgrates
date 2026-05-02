@@ -258,7 +258,12 @@ func (s *Server) ServeHTTP(addr, jsonRPCURL, wsRPCURL, pprofPath string, useBasi
 		utils.Logger.Info("<HTTP> enabling basic auth")
 	}
 	utils.Logger.Info(fmt.Sprintf("<HTTP> start listening at <%s>", addr))
-	if err := http.ListenAndServe(addr, s.httpMux); err != nil {
+	httpSrv := &http.Server{
+		Addr:              addr,
+		Handler:           s.httpMux,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	if err := httpSrv.ListenAndServe(); err != nil {
 		log.Printf("<HTTP>Error: %s when listening ", err)
 		shdChan.CloseOnce()
 	}
@@ -521,9 +526,10 @@ func (s *Server) ServeHTTPTLS(addr, serverCrt, serverKey, caCert string, serverP
 		return
 	}
 	httpSrv := http.Server{
-		Addr:      addr,
-		Handler:   s.httpsMux,
-		TLSConfig: config,
+		Addr:              addr,
+		Handler:           s.httpsMux,
+		TLSConfig:         config,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 	utils.Logger.Info(fmt.Sprintf("<HTTPS> start listening at <%s>", addr))
 	if err := httpSrv.ListenAndServeTLS(serverCrt, serverKey); err != nil {
