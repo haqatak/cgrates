@@ -628,7 +628,9 @@ cgrates.org,DSP2_RALS,,,,,,RALS4,,10,,,`,
 	}
 	ngHA2.Run(t)
 
-	httpC := &http.Client{}
+	httpC := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	var sessionNo atomic.Int64
 
 	sendRequest := func(t *testing.T, port int, reqType, sessionID, account, destination, usage string) string {
