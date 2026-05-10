@@ -1456,7 +1456,12 @@ func resetStatQueue(_ *Account, a *Action, _ Actions, _ *FilterS, _ any, _ Share
 }
 
 func remoteSetAccount(ub *Account, a *Action, _ Actions, _ *FilterS, _ any, _ SharedActionsData, _ ActionConnCfg) (err error) {
-	client := &http.Client{Transport: httpPstrTransport}
+	// SECURITY: Explicitly set a timeout on the HTTP client to prevent resource
+	// exhaustion from slow-client attacks (DoS) or indefinitely hanging connections.
+	client := &http.Client{
+		Transport: httpPstrTransport,
+		Timeout:   config.CgrConfig().GeneralCfg().ReplyTimeout,
+	}
 	var resp *http.Response
 	req := new(bytes.Buffer)
 	if err = json.NewEncoder(req).Encode(ub); err != nil {

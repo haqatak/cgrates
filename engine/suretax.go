@@ -181,8 +181,11 @@ func SureTaxProcessCdr(cdr *CDR) error {
 		return errors.New("Invalid SureTax configuration")
 	}
 	if sureTaxClient == nil { // First time used, init the client here
+		// SECURITY: Explicitly set a timeout on the HTTP client to prevent resource
+		// exhaustion from slow-client attacks (DoS) or indefinitely hanging connections.
 		sureTaxClient = &http.Client{
 			Transport: httpPstrTransport,
+			Timeout:   config.CgrConfig().GeneralCfg().ReplyTimeout,
 		}
 	}
 	req, err := NewSureTaxRequest(cdr, stCfg)

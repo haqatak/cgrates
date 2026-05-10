@@ -119,6 +119,7 @@ func (pstr *SQSee) Connect() (err error) {
 				Transport: &http.Transport{
 					TLSClientConfig: tlsCfg,
 				},
+				Timeout: config.CgrConfig().GeneralCfg().ReplyTimeout,
 			}
 		}
 		pstr.session, err = session.NewSessionWithOptions(
