@@ -122,6 +122,26 @@ func (sqls *SQLStorage) IsDBEmpty() (resp bool, err error) {
 func (sqls *SQLStorage) GetTpIds(colName string) ([]string, error) {
 	var rows *sql.Rows
 	var err error
+
+	if colName != "" {
+		isAllowed := false
+		switch colName {
+		case utils.TBLTPTimings, utils.TBLTPDestinations, utils.TBLTPRates,
+			utils.TBLTPDestinationRates, utils.TBLTPRatingPlans, utils.TBLTPRatingProfiles,
+			utils.TBLTPSharedGroups, utils.TBLTPActions, utils.TBLTPActionPlans,
+			utils.TBLTPActionTriggers, utils.TBLTPAccountActions, utils.TBLTPResources,
+			utils.TBLTPIPs, utils.TBLTPStats, utils.TBLTPRankings, utils.TBLTPTrends,
+			utils.TBLTPThresholds, utils.TBLTPFilters, utils.SessionCostsTBL,
+			utils.CDRsTBL, utils.TBLTPRoutes, utils.TBLTPAttributes, utils.TBLTPChargers,
+			utils.TBLVersions, utils.OldSMCosts, utils.TBLTPDispatchers,
+			utils.TBLTPDispatcherHosts:
+			isAllowed = true
+		}
+		if !isAllowed {
+			return nil, fmt.Errorf("invalid table name: %s", colName)
+		}
+	}
+
 	qryStr := fmt.Sprintf(" (SELECT tpid FROM %s)", colName)
 	if colName == "" {
 		qryStr = fmt.Sprintf(
