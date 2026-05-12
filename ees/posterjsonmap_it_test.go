@@ -110,7 +110,11 @@ func testHTTPJsonMapStartHTTPServer(t *testing.T) {
 		httpJsonHdr = r.Header.Clone()
 	})
 
-	go http.ListenAndServe(":12081", nil)
+	srv := &http.Server{
+		Addr:              ":12081",
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	go srv.ListenAndServe()
 }
 
 func testHTTPJsonMapExportEvent(t *testing.T) {

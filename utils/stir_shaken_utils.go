@@ -76,7 +76,7 @@ func GetReaderFromPath(path string, timeout time.Duration) (r io.ReadCloser, err
 	if !IsURL(path) {
 		return os.Open(path)
 	}
-	httpClient := http.Client{
+	httpClient := &http.Client{
 		Timeout: timeout,
 	}
 	var resp *http.Response

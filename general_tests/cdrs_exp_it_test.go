@@ -180,7 +180,7 @@ func testCDRsExpPrepareHTTP(t *testing.T) {
 		fmt.Fprint(w, utils.OK)
 		cdrsExpHTTPEv <- ev
 	})
-	cdrsExpHTTPServer = &http.Server{Addr: ":12081", Handler: srvMux}
+	cdrsExpHTTPServer = &http.Server{Addr: ":12081", Handler: srvMux, ReadHeaderTimeout: 10 * time.Second}
 
 	go func(t2 *testing.T) {
 		if err := cdrsExpHTTPServer.ListenAndServe(); err != nil &&

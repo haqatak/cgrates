@@ -113,7 +113,11 @@ func testHTTPStartHTTPServer(t *testing.T) {
 		}
 		httpJsonHdr = r.Header.Clone()
 	})
-	go http.ListenAndServe(":12080", nil)
+	srv := &http.Server{
+		Addr:              ":12080",
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	go srv.ListenAndServe()
 }
 
 func testHTTPExportEvent(t *testing.T) {
