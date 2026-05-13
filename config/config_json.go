@@ -64,6 +64,7 @@ const (
 	RPCConnsJsonName    = "rpc_conns"
 	SIPAgentJson        = "sip_agent"
 	JanusAgentJson      = "janus_agent"
+	ERateAgentJson      = "erate_agent"
 	TemplatesJson       = "templates"
 	ConfigSJson         = "configs"
 	APIBanCfgJson       = "apiban"
@@ -76,7 +77,7 @@ var (
 	sortedCfgSections = []string{GENERAL_JSN, RPCConnsJsonName, DATADB_JSN, STORDB_JSN, LISTEN_JSN, TlsCfgJson, HTTP_JSN, SCHEDULER_JSN,
 		CACHE_JSN, FilterSjsn, RALS_JSN, CDRS_JSN, ERsJson, SessionSJson, AsteriskAgentJSN, FreeSWITCHAgentJSN, KamailioAgentJSN,
 		DA_JSN, RA_JSN, HttpAgentJson, DNSAgentJson, PrometheusAgentJSON, ATTRIBUTE_JSN, ChargerSCfgJson, RESOURCES_JSON, STATS_JSON, TRENDS_JSON, RANKINGS_JSON,
-		THRESHOLDS_JSON, RouteSJson, MAILER_JSN, SURETAX_JSON, CgrLoaderCfgJson, CgrMigratorCfgJson, DispatcherSJson, JanusAgentJson,
+		THRESHOLDS_JSON, RouteSJson, MAILER_JSN, SURETAX_JSON, CgrLoaderCfgJson, CgrMigratorCfgJson, DispatcherSJson, JanusAgentJson, ERateAgentJson,
 		AnalyzerCfgJson, ApierS, EEsJson, SIPAgentJson, RegistrarCJson, TemplatesJson, ConfigSJson, APIBanCfgJson, SentryPeerCfgJson, CoreSCfgJson, IPsJSON}
 )
 
@@ -634,4 +635,16 @@ func (jc CgrJsonCfg) IPsJsonCfg() (*IPsJsonCfg, error) {
 		return nil, err
 	}
 	return pa, nil
+}
+
+func (jsnCfg CgrJsonCfg) ERateAgentCfgJson() (*ERateAgentCfg, error) {
+	raw, haskey := jsnCfg[ERateAgentJson]
+	if !haskey {
+		return nil, nil
+	}
+	cfg := new(ERateAgentCfg)
+	if err := json.Unmarshal(*raw, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
