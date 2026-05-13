@@ -495,6 +495,7 @@ func RunCGREngine(args []string, hooks ...func(*config.CGRConfig) error) {
 		utils.FreeSWITCHAgent: new(sync.WaitGroup),
 		utils.GlobalVarS:      new(sync.WaitGroup),
 		utils.HTTPAgent:       new(sync.WaitGroup),
+		"ERateAgent":          new(sync.WaitGroup),
 		utils.KamailioAgent:   new(sync.WaitGroup),
 		utils.RadiusAgent:     new(sync.WaitGroup),
 		utils.RALService:      new(sync.WaitGroup),
@@ -631,6 +632,7 @@ func RunCGREngine(args []string, hooks ...func(*config.CGRConfig) error) {
 			shdChan, connManager, server, internalERsChan, anz, srvDep),
 		NewSIPAgent(cfg, filterSChan, shdChan, connManager, caps, srvDep),
 		NewJanusAgent(cfg, filterSChan, server, connManager, caps, srvDep),
+		NewERateAgent(cfg, server, connManager, caps, srvDep),
 	)
 	srvManager.StartServices()
 	// Start FilterS
