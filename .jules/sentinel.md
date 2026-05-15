@@ -7,3 +7,7 @@
 **Vulnerability:** In `engine/storage_sql.go` inside the `GetTpIds(colName string)` method, the `colName` argument was directly formatted into a SQL query string (`fmt.Sprintf(" (SELECT tpid FROM %s)", colName)`) without any validation or parameterization.
 **Learning:** SQL parameterization (using `?` placeholders) only works for values, not for table or column names. When constructing queries dynamically with table names, directly formatting input strings creates a severe SQL injection vulnerability if the input is untrusted.
 **Prevention:** Always validate dynamic table names against a strict allowlist of known, safe constants before using them in a query. Do not rely on ORM functions for table names unless they explicitly document safe handling, and avoid string formatting for query construction whenever possible.
+## 2024-06-18 - [Fix SQL Injection in RemTpData]
+**Vulnerability:** SQL injection vulnerability in `engine/storage_sql.go` where `tx.Where(key+" = ?", value)` allowed unescaped dynamic column names in SQL queries.
+**Learning:** Found string concatenation being used to build `Where` queries with dynamic keys in gorm.
+**Prevention:** Use gorm's built-in map parameterization `tx.Where(map[string]interface{}{key: value})` for dynamic keys to ensure proper escaping.

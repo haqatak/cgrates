@@ -280,7 +280,7 @@ func (sqls *SQLStorage) RemTpData(table, tpid string, args map[string]string) er
 	tx = tx.Table(table).Where("tpid = ?", tpid)
 	// Compose filters
 	for key, value := range args {
-		tx = tx.Where(key+" = ?", value)
+		tx = tx.Where(map[string]interface{}{key: value})
 	}
 	if err := tx.Delete(nil).Error; err != nil {
 		tx.Rollback()
