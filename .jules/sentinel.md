@@ -7,3 +7,8 @@
 **Vulnerability:** In `engine/storage_sql.go` inside the `GetTpIds(colName string)` method, the `colName` argument was directly formatted into a SQL query string (`fmt.Sprintf(" (SELECT tpid FROM %s)", colName)`) without any validation or parameterization.
 **Learning:** SQL parameterization (using `?` placeholders) only works for values, not for table or column names. When constructing queries dynamically with table names, directly formatting input strings creates a severe SQL injection vulnerability if the input is untrusted.
 **Prevention:** Always validate dynamic table names against a strict allowlist of known, safe constants before using them in a query. Do not rely on ORM functions for table names unless they explicitly document safe handling, and avoid string formatting for query construction whenever possible.
+
+## 2024-05-24 - Missing HTTP Client Timeouts
+**Vulnerability:** Several `http.Client` instances in `engine/suretax.go`, `engine/action.go`, `ees/s3.go`, and `ees/sqs.go` were initialized without explicitly setting a `Timeout`.
+**Learning:** Default `http.Client` instances in Go do not enforce any request timeouts. This exposes the application to resource exhaustion vulnerabilities (denial-of-service) because network calls can hang indefinitely if the external service is slow or unreachable.
+**Prevention:** Always explicitly configure the `Timeout` field when initializing `http.Client`. In this application, a reusable pattern is to use the global configuration standard via `config.CgrConfig().GeneralCfg().ReplyTimeout`.
