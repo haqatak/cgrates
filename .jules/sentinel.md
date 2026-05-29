@@ -7,6 +7,11 @@
 **Vulnerability:** In `engine/storage_sql.go` inside the `GetTpIds(colName string)` method, the `colName` argument was directly formatted into a SQL query string (`fmt.Sprintf(" (SELECT tpid FROM %s)", colName)`) without any validation or parameterization.
 **Learning:** SQL parameterization (using `?` placeholders) only works for values, not for table or column names. When constructing queries dynamically with table names, directly formatting input strings creates a severe SQL injection vulnerability if the input is untrusted.
 **Prevention:** Always validate dynamic table names against a strict allowlist of known, safe constants before using them in a query. Do not rely on ORM functions for table names unless they explicitly document safe handling, and avoid string formatting for query construction whenever possible.
+
+## 2024-05-24 - Missing Timeout in HTTP Clients
+**Vulnerability:** Several `http.Client` instances across the codebase (e.g., in `engine/action.go`, `engine/suretax.go`, `ees/s3.go`, `ees/sqs.go`) were initialized without a `Timeout` value.
+**Learning:** Default `http.Client` initializations in Go have no timeout. This can lead to indefinite hangs, memory leaks, and resource exhaustion if the remote server is unresponsive or slow to send data.
+**Prevention:** Always explicitly configure the `Timeout` field when initializing `http.Client` instances. In production code, use a safe global standard like `config.CgrConfig().GeneralCfg().ReplyTimeout`.
 ## 2024-05-24 - Missing Timeout in `http.Client` Instantiations
 **Vulnerability:** Several `http.Client` instances in `engine/suretax.go` and `engine/action.go` were instantiated without configuring timeouts.
 **Learning:** In Go, default `http.Client` instances do not enforce a timeout, which means they can hang indefinitely if the external service fails to respond. This can lead to goroutine leaks and resource exhaustion attacks (a potential Denial of Service risk).
