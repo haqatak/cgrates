@@ -611,3 +611,43 @@ func TestV1DisconnectPeer(t *testing.T) {
 		t.Errorf("Expected ErrNotFound, got: %v", err)
 	}
 }
+
+func TestNewDiameterAgent(t *testing.T) {
+	cgrCfg, err := config.NewCGRConfigFromJSONStringWithDefaults(`{"diameter_agent": {"dictionaries_path": ""}}`)
+	if err != nil {
+		t.Fatalf("Failed to create mock config: %v", err)
+	}
+
+	filterS := engine.NewFilterS(cgrCfg, nil, nil)
+	connMgr := engine.NewConnManager(cgrCfg, nil)
+	caps := engine.NewCaps(0, "")
+
+	da, err := NewDiameterAgent(cgrCfg, filterS, connMgr, caps)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if da == nil {
+		t.Fatal("Expected da to be non-nil")
+	}
+	if da.cgrCfg != cgrCfg {
+		t.Errorf("Expected cgrCfg to be set correctly")
+	}
+	if da.filterS != filterS {
+		t.Errorf("Expected filterS to be set correctly")
+	}
+	if da.connMgr != connMgr {
+		t.Errorf("Expected connMgr to be set correctly")
+	}
+	if da.caps != caps {
+		t.Errorf("Expected caps to be set correctly")
+	}
+	if da.raa == nil {
+		t.Errorf("Expected raa map to be initialized")
+	}
+	if da.dpa == nil {
+		t.Errorf("Expected dpa map to be initialized")
+	}
+	if da.peers == nil {
+		t.Errorf("Expected peers map to be initialized")
+	}
+}
