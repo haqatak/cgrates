@@ -317,7 +317,6 @@ func (ms MapStorage) GetKeys(nested bool, nestedLimit int, prefix string) (keys 
 		case nil, int, int32, int64, uint32, uint64, bool, float32, float64, []uint8, time.Duration, time.Time, string:
 			keys = append(keys, prefix+k)
 		default:
-			// ToDo:should not be called
 			keys = append(keys, getPathFromValue(reflect.ValueOf(v), prefix+k+NestingSep)...)
 		}
 	}
