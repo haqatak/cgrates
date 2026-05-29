@@ -1130,3 +1130,34 @@ func TestSessionSCfgClone(t *testing.T) {
 		})
 	}
 }
+
+func TestNewDfltFsConnConfig(t *testing.T) {
+	// Save the original value and defer restoration
+	orig := dfltFsConnConfig
+	defer func() {
+		dfltFsConnConfig = orig
+	}()
+
+	// Case 1: dfltFsConnConfig is nil
+	dfltFsConnConfig = nil
+	resNil := NewDfltFsConnConfig()
+	if resNil == nil {
+		t.Error("Expected non-nil result when dfltFsConnConfig is nil")
+	} else if *resNil != (FsConnCfg{}) {
+		t.Errorf("Expected empty FsConnCfg, got: %+v", *resNil)
+	}
+
+	// Case 2: dfltFsConnConfig is not nil
+	dummy := &FsConnCfg{
+		Address: "127.0.0.1:8021",
+	}
+	dfltFsConnConfig = dummy
+	resNotNil := NewDfltFsConnConfig()
+	if resNotNil == nil {
+		t.Error("Expected non-nil result when dfltFsConnConfig is not nil")
+	} else if *resNotNil != *dummy {
+		t.Errorf("Expected %v, got: %v", *dummy, *resNotNil)
+	} else if resNotNil == dummy {
+		t.Error("Expected a copy, but got the same pointer")
+	}
+}
