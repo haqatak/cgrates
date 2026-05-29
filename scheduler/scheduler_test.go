@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cgrates/cgrates/config"
 	"github.com/cgrates/cgrates/engine"
 	"github.com/cgrates/cgrates/utils"
 )
@@ -44,5 +45,38 @@ func TestSchedulerUpdateActStats(t *testing.T) {
 	sched.updateActStats(&engine.Action{Id: "REMOVE_3", ActionType: utils.MetaRemoveAccount}, false)
 	if len(sched.actSuccessStats[utils.MetaRemoveAccount]) != 1 || len(sched.actSuccessStats) != 1 {
 		t.Errorf("Wrong stats: %+v", sched.actSuccessStats)
+	}
+}
+
+func TestNewScheduler(t *testing.T) {
+	// Create mock dependencies
+	cfg := config.NewDefaultCGRConfig()
+
+	// Create DataDB mock, engine needs DataDB
+	dataDBMock := &engine.DataDBMock{}
+	dm := engine.NewDataManager(dataDBMock, cfg.CacheCfg(), nil)
+
+	fltrS := engine.NewFilterS(cfg, nil, dm)
+
+	// Call NewScheduler
+	s := NewScheduler(dm, cfg, fltrS)
+
+	// Verify it returns a valid non-nil instance
+	if s == nil {
+		t.Fatal("NewScheduler returned nil")
+	}
+
+	// Verify fields are correctly assigned
+	if s.dm != dm {
+		t.Errorf("expected dm to be assigned to scheduler, got %v", s.dm)
+	}
+	if s.cfg != cfg {
+		t.Errorf("expected cfg to be assigned to scheduler, got %v", s.cfg)
+	}
+	if s.fltrS != fltrS {
+		t.Errorf("expected fltrS to be assigned to scheduler, got %v", s.fltrS)
+	}
+	if s.restartLoop == nil {
+		t.Error("expected restartLoop channel to be initialized, but it was nil")
 	}
 }
