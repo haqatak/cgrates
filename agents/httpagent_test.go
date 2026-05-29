@@ -25,6 +25,7 @@ import (
 
 	"github.com/cgrates/cgrates/config"
 	"github.com/cgrates/cgrates/engine"
+	"github.com/cgrates/cgrates/utils"
 )
 
 func TestNewHTTPAgent(t *testing.T) {
@@ -98,6 +99,8 @@ func TestNewHTTPAgent(t *testing.T) {
 func TestHTTPAgentServeHTTP(t *testing.T) {
 	agent := &HTTPAgent{
 		caps: engine.NewCaps(0, ""),
+		reqPayload: utils.MetaUrl,
+		rplyPayload: utils.MetaTextPlain,
 	}
 	req := httptest.NewRequest("GET", "http://cgrates.org", nil)
 	rr := httptest.NewRecorder()

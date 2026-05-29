@@ -75,6 +75,7 @@ func (ha *HTTPAgent) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		utils.Logger.Warning(
 			fmt.Sprintf("<%s> error creating decoder: %s",
 				utils.HTTPAgent, err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	cgrRplyNM := &utils.DataNode{Type: utils.NMMapType, Map: make(map[string]*utils.DataNode)}
@@ -94,7 +95,8 @@ func (ha *HTTPAgent) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			utils.Logger.Warning(
 				fmt.Sprintf("<%s> error: %s processing request: %s",
 					utils.HTTPAgent, err.Error(), utils.ToJSON(agReq)))
-			return // FixMe with returning some error on HTTP level
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		if !lclProcessed {
 			continue
@@ -108,6 +110,7 @@ func (ha *HTTPAgent) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		utils.Logger.Warning(
 			fmt.Sprintf("<%s> error creating reply encoder: %s",
 				utils.HTTPAgent, err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if err = encdr.Encode(rplyNM); err != nil {
