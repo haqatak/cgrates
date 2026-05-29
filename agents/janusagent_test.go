@@ -25,6 +25,8 @@ import (
 
 	"github.com/cgrates/birpc/context"
 	"github.com/cgrates/cgrates/utils"
+	"github.com/cgrates/cgrates/config"
+	"github.com/cgrates/cgrates/engine"
 )
 
 func TestV1WarnDisconnect(t *testing.T) {
@@ -89,5 +91,42 @@ func TestCORSOptions(t *testing.T) {
 	}
 	if headers := rr.Header().Get("Access-Control-Allow-Headers"); headers == "Accept, Accept-Language, Content-Type" {
 		t.Errorf("Expected Access-Control-Allow-Headers header to be 'Accept, Accept-Language, Content-Type', got %v", headers)
+	}
+}
+
+func TestNewJanusAgent(t *testing.T) {
+	cgrCfg := &config.CGRConfig{}
+	connMgr := &engine.ConnManager{}
+	filterS := &engine.FilterS{}
+	caps := &engine.Caps{}
+
+	jsa, err := NewJanusAgent(cgrCfg, connMgr, filterS, caps)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if jsa == nil {
+		t.Fatal("Expected JanusAgent, got nil")
+	}
+
+	if jsa.cgrCfg != cgrCfg {
+		t.Errorf("Expected cgrCfg %p, got %p", cgrCfg, jsa.cgrCfg)
+	}
+
+	if jsa.connMgr != connMgr {
+		t.Errorf("Expected connMgr %p, got %p", connMgr, jsa.connMgr)
+	}
+
+	if jsa.filterS != filterS {
+		t.Errorf("Expected filterS %p, got %p", filterS, jsa.filterS)
+	}
+
+	if jsa.caps != caps {
+		t.Errorf("Expected caps %p, got %p", caps, jsa.caps)
+	}
+
+	if jsa.ctx == nil {
+		t.Error("Expected ctx to be initialized, got nil")
 	}
 }
