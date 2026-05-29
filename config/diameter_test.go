@@ -105,13 +105,6 @@ func TestRequestProcessorloadFromJsonCfg1(t *testing.T) {
 	if err := jsonCfg.diameterAgentCfg.loadFromJSONCfg(cfgJSON, jsonCfg.generalCfg.RSRSep); err == nil || err.Error() != expected {
 		t.Errorf("Expected %+v, received %+v", expected, err)
 	}
-
-	cfgJSON2 := &DiameterAgentJsonCfg{
-		ConnHealthCheckInterval: utils.StringPointer("errduration"),
-	}
-	if err := jsonCfg.diameterAgentCfg.loadFromJSONCfg(cfgJSON2, jsonCfg.generalCfg.RSRSep); err == nil {
-		t.Errorf("Expected %+v, received %+v", expected, err)
-	}
 }
 
 func TestRequestProcessorloadFromJsonCfg2(t *testing.T) {
@@ -194,7 +187,6 @@ func TestDiameterAgentCfgAsMapInterface(t *testing.T) {
 		utils.ConnStatusThresholdIDsCfg:  []string{},
 		utils.SyncedConnReqsCfg:          true,
 		utils.VendorIDCfg:                0,
-		utils.ConnHealthCheckIntervalCfg: "0s",
 		utils.RequestProcessorsCfg: []map[string]any{
 			{
 				utils.IDCfg:       utils.CGRateSLwr,
@@ -269,7 +261,6 @@ func TestDiameterAgentCfgAsMapInterface1(t *testing.T) {
 		utils.ConnStatusThresholdIDsCfg:  []string{},
 		utils.SyncedConnReqsCfg:          false,
 		utils.VendorIDCfg:                0,
-		utils.ConnHealthCheckIntervalCfg: "0s",
 		utils.RequestProcessorsCfg:       []map[string]any{},
 	}
 	if cgrCfg, err := NewCGRConfigFromJSONStringWithDefaults(cfgJSONStr); err != nil {
