@@ -8,7 +8,7 @@
 **Learning:** SQL parameterization (using `?` placeholders) only works for values, not for table or column names. When constructing queries dynamically with table names, directly formatting input strings creates a severe SQL injection vulnerability if the input is untrusted.
 **Prevention:** Always validate dynamic table names against a strict allowlist of known, safe constants before using them in a query. Do not rely on ORM functions for table names unless they explicitly document safe handling, and avoid string formatting for query construction whenever possible.
 
-## 2026-05-25 - Missing Timeout in HTTP Client
-**Vulnerability:** In `engine/action.go` and `engine/suretax.go`, the `http.Client` instances used to interact with external APIs (`remoteSetAccount` and `SureTaxProcessCdr`) did not configure a `Timeout` field.
-**Learning:** In Go, the default `http.Client` (and instances created without an explicit `Timeout`) has no timeout. This can lead to the client waiting indefinitely for a response if the external server hangs or experiences network issues. This vulnerability can result in resource exhaustion (e.g., hanging goroutines) leading to a Denial of Service (DoS).
-**Prevention:** Always set an explicit `Timeout` when initializing an `http.Client`. In production code like the `engine` package, use a configurable, global standard such as `config.CgrConfig().GeneralCfg().ReplyTimeout` to ensure all remote calls eventually return.
+## 2024-05-25 - Missing Timeout in HTTP Client
+**Vulnerability:** The HTTP clients in `engine/action.go` and `engine/suretax.go` were initialized using `&http.Client{}` without setting explicitly any timeout configurations such as `Timeout`.
+**Learning:** In Go, default `http.Client` instances do not enforce timeouts for requests. This leaves the application vulnerable to resource exhaustion from slow servers or network hangs, where the client will wait indefinitely for a response.
+**Prevention:** Always use explicit `http.Client` instantiation and configure the `Timeout` field to a safe default (e.g., `config.CgrConfig().GeneralCfg().ReplyTimeout`) when making outbound HTTP requests, except when interacting with systems that require long-polling or large transfers (like AWS S3/SQS).
