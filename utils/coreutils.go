@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	math_rand "math/rand"
 	"os"
 	"path/filepath"
@@ -912,7 +913,15 @@ func CastRPCErr(err error) error {
 
 // RandomInteger returns a random 64-bit integer between min and max values
 func RandomInteger(min, max int64) int64 {
-	return math_rand.Int63n(max-min) + min
+	if min >= max {
+		return min
+	}
+	n, err := rand.Int(rand.Reader, big.NewInt(max-min))
+	if err != nil {
+		// Fallback to weak PRNG if crypto/rand fails
+		return math_rand.Int63n(max-min) + min
+	}
+	return n.Int64() + min
 }
 
 type LoadIDsWithAPIOpts struct {
