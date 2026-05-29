@@ -148,7 +148,7 @@ func testLoaderITRemoveLoad(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	loader, err = NewTpReader(dataDbCsv, csvStorage, "", "",
+	loader, err = NewTpReader(dataDbCsv, config.CgrConfig().CacheCfg(), csvStorage, "", "",
 		[]string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
 	if err != nil {
 		t.Error(err)
@@ -233,7 +233,7 @@ func testLoaderITLoadFromCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	loader, err = NewTpReader(dataDbCsv, csvStorage, "", "",
+	loader, err = NewTpReader(dataDbCsv, config.CgrConfig().CacheCfg(), csvStorage, "", "",
 		[]string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
 	if err != nil {
 		t.Error(err)
@@ -564,7 +564,7 @@ func testLoaderITImportToStorDb(t *testing.T) {
 
 // Loads data from storDb into dataDb
 func testLoaderITLoadFromStorDb(t *testing.T) {
-	loader, _ := NewTpReader(dataDbCsv, storDb, utils.TestSQL, "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
+	loader, _ := NewTpReader(dataDbCsv, config.CgrConfig().CacheCfg(), storDb, utils.TestSQL, "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
 	if err := loader.LoadDestinations(); err != nil && err.Error() != utils.NotFoundCaps {
 		t.Error("Failed loading destinations: ", err.Error())
 	}
@@ -601,7 +601,7 @@ func testLoaderITLoadFromStorDb(t *testing.T) {
 }
 
 func testLoaderITLoadIndividualProfiles(t *testing.T) {
-	loader, _ := NewTpReader(dataDbCsv, storDb, utils.TestSQL, "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
+	loader, _ := NewTpReader(dataDbCsv, config.CgrConfig().CacheCfg(), storDb, utils.TestSQL, "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
 	// Load ratingPlans. This will also set destination keys
 	if rps, err := storDb.GetTPRatingPlans(utils.TestSQL, "", nil); err != nil {
 		t.Fatal("Could not retrieve rating plans")
