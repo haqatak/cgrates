@@ -361,8 +361,8 @@ func testSessionsBiRPCSessionOriginatorTerminate(t *testing.T) {
 	time.Sleep(50 * time.Millisecond) // Give time for  debits to occur
 	if err := sessionsRPC.Call(context.Background(), utils.APIerSv2GetAccount, attrGetAcnt, &acnt); err != nil {
 		t.Error(err)
-	} else if acnt.BalanceMap[utils.MetaVoice].GetTotalValue() > 0.995*float64(time.Second) { // FixMe: should be not 0.93?
-		t.Errorf("Balance value: %f", acnt.BalanceMap[utils.MetaVoice].GetTotalValue())
+	} else if acnt.BalanceMap[utils.MetaVoice].GetTotalValue() != 0.993*float64(time.Second) {
+		t.Errorf("Expecting: %f, received: %f", 0.993*float64(time.Second), acnt.BalanceMap[utils.MetaVoice].GetTotalValue())
 	}
 
 	if err := sessionsRPC.Call(context.Background(), utils.SessionSv1ProcessCDR, termArgs.CGREvent, &reply); err != nil {
