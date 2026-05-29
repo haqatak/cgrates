@@ -8,6 +8,10 @@
 **Learning:** SQL parameterization (using `?` placeholders) only works for values, not for table or column names. When constructing queries dynamically with table names, directly formatting input strings creates a severe SQL injection vulnerability if the input is untrusted.
 **Prevention:** Always validate dynamic table names against a strict allowlist of known, safe constants before using them in a query. Do not rely on ORM functions for table names unless they explicitly document safe handling, and avoid string formatting for query construction whenever possible.
 
+## 2024-05-24 - Missing HTTP Client Timeouts
+**Vulnerability:** Several `http.Client` instances in `engine/suretax.go`, `engine/action.go`, `ees/s3.go`, and `ees/sqs.go` were initialized without explicitly setting a `Timeout`.
+**Learning:** Default `http.Client` instances in Go do not enforce any request timeouts. This exposes the application to resource exhaustion vulnerabilities (denial-of-service) because network calls can hang indefinitely if the external service is slow or unreachable.
+**Prevention:** Always explicitly configure the `Timeout` field when initializing `http.Client`. In this application, a reusable pattern is to use the global configuration standard via `config.CgrConfig().GeneralCfg().ReplyTimeout`.
 ## 2024-05-25 - Missing Timeout in HTTP Client
 **Vulnerability:** The HTTP clients in `engine/action.go` and `engine/suretax.go` were initialized using `&http.Client{}` without setting explicitly any timeout configurations such as `Timeout`.
 **Learning:** In Go, default `http.Client` instances do not enforce timeouts for requests. This leaves the application vulnerable to resource exhaustion from slow servers or network hangs, where the client will wait indefinitely for a response.
