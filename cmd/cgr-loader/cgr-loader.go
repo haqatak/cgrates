@@ -400,7 +400,7 @@ func main() {
 		log.Fatal(err)
 	}
 	var tpReader *engine.TpReader
-	if tpReader, err = engine.NewTpReader(dataDB, loader,
+	if tpReader, err = engine.NewTpReader(dataDB, config.CgrConfig().CacheCfg(), loader,
 		ldrCfg.LoaderCgrCfg().TpID, ldrCfg.GeneralCfg().DefaultTimezone,
 		ldrCfg.LoaderCgrCfg().CachesConns,
 		ldrCfg.LoaderCgrCfg().SchedulerConns); err != nil {

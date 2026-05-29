@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cgrates/cgrates/config"
 	"github.com/cgrates/cgrates/utils"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -294,7 +295,7 @@ var csvr *TpReader
 
 func init() {
 	var err error
-	csvr, err = NewTpReader(dm.dataDB, NewStringCSVStorage(utils.CSVSep,
+	csvr, err = NewTpReader(dm.dataDB, config.CgrConfig().CacheCfg(), NewStringCSVStorage(utils.CSVSep,
 		DestinationsCSVContent, TimingsCSVContent, RatesCSVContent, DestinationRatesCSVContent,
 		RatingPlansCSVContent, RatingProfilesCSVContent, SharedGroupsCSVContent,
 		ActionsCSVContent, ActionPlansCSVContent, ActionTriggersCSVContent, AccountActionsCSVContent,

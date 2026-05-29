@@ -1075,7 +1075,7 @@ func TestTPReaderLoadDestinationsFiltered(t *testing.T) {
 	}, []string{"groupId"}, true, "tId")
 	db.db = tscache
 
-	tpr, err := NewTpReader(db, db, "itemId", "local", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "itemId", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1101,7 +1101,7 @@ func TestTPReaderLoadAll(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(nil, db, "", "local", nil, nil)
+	tpr, err := NewTpReader(nil, config.CgrConfig().CacheCfg(), db, "", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1192,7 +1192,7 @@ func TestTpReaderIsValid(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(nil, db, "", "local", nil, nil)
+	tpr, err := NewTpReader(nil, config.CgrConfig().CacheCfg(), db, "", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1245,7 +1245,7 @@ func TestTpReaderLoadAccountActions(t *testing.T) {
 		t.Error(dErr)
 	}
 	db.db = tscache
-	tpr, err := NewTpReader(db, db, "*prf", "local", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1464,7 +1464,7 @@ func TestTpReaderLoadTimingsErr(t *testing.T) {
 		t.Error(dErr)
 	}
 	db.db = tscache
-	tpr, err := NewTpReader(db, db, "*prf", "local", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1502,7 +1502,7 @@ func TestLoadDestinationRatesErr(t *testing.T) {
 		t.Error(dErr)
 	}
 	db.db = tscache
-	tpr, err := NewTpReader(db, db, "*prf", "local", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1560,7 +1560,7 @@ func TestTpReaderLoadRatingPlansFilteredErr(t *testing.T) {
 		t.Error(dErr)
 	}
 
-	tpr, err := NewTpReader(db, db, "*prf", "local", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1593,7 +1593,7 @@ func TestLoadRatingProfilesFiltered(t *testing.T) {
 		t.Error(dErr)
 	}
 	db.db = tscache
-	tpr, err := NewTpReader(db, db, "*prf", "local", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "local", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1653,7 +1653,7 @@ func TestTpReaderLoadActionTriggers(t *testing.T) {
 		t.Error(dErr)
 	}
 	db.db = tscache
-	tpr, err := NewTpReader(db, db, "*prf", "UTC", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "UTC", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1741,7 +1741,7 @@ func TestTpReaderSetDestination(t *testing.T) {
 		t.Error(dErr)
 	}
 	db.db = tscache
-	tpr, err := NewTpReader(db, db, "*prf", "UTC", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "UTC", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1777,7 +1777,7 @@ func TestTPReaderLoadAccountActionsFilteredErr(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "*prf", "UTC", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "UTC", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1826,7 +1826,7 @@ func TestTprRemoveFromDatabase(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "*prf", "UTC", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "UTC", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1888,7 +1888,7 @@ func TestLoadActionPlansErrs(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "tpr", "UTC", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "tpr", "UTC", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1939,7 +1939,7 @@ func TestLoadRatingPlansFiltered(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "*prf", "UTC", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "*prf", "UTC", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2071,7 +2071,7 @@ func TestTPRLoadRatingProfiles(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "RP1", "", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "RP1", "", nil, nil)
 
 	if err != nil {
 		t.Error(err)
@@ -2137,7 +2137,7 @@ func TestTPRLoadAccountActions(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "", "", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "", "", nil, nil)
 
 	if err != nil {
 		t.Error(err)
@@ -2167,7 +2167,7 @@ func TestTpReaderRemoveFromDatabase(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "", "", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "", "", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2233,7 +2233,7 @@ func TestTpReaderRemoveFromDatabaseDspPrf(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "", "", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "", "", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2277,7 +2277,7 @@ func TestTpReaderRemoveFromDatabaseDspHst(t *testing.T) {
 	if dErr != nil {
 		t.Error(dErr)
 	}
-	tpr, err := NewTpReader(db, db, "", "", nil, nil)
+	tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "", "", nil, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2322,7 +2322,7 @@ func TestTprLoadAccountActionFiltered(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	tpr, err := NewTpReader(dataDb, storDb, "TP1", "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
+	tpr, err := NewTpReader(dataDb, config.CgrConfig().CacheCfg(), storDb, "TP1", "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2496,7 +2496,7 @@ func TestTprLoadRatingPlansFiltered(t *testing.T) {
 			},
 		}}
 	storDb.SetTPRatingPlans([]*utils.TPRatingPlan{rp})
-	tpr, err := NewTpReader(dataDb, storDb, "TP1", "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
+	tpr, err := NewTpReader(dataDb, config.CgrConfig().CacheCfg(), storDb, "TP1", "", []string{utils.ConcatenatedKey(utils.MetaInternal, utils.MetaCaches)}, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -2524,7 +2524,7 @@ func TestTprLoadActionsBalanceWeightTime(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			tpr, err := NewTpReader(db, db, "TP1", "", nil, nil)
+			tpr, err := NewTpReader(db, config.CgrConfig().CacheCfg(), db, "TP1", "", nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
