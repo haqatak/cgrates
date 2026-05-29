@@ -12,3 +12,16 @@
 **Vulnerability:** Several `http.Client` instances across the codebase (e.g., in `engine/action.go`, `engine/suretax.go`, `ees/s3.go`, `ees/sqs.go`) were initialized without a `Timeout` value.
 **Learning:** Default `http.Client` initializations in Go have no timeout. This can lead to indefinite hangs, memory leaks, and resource exhaustion if the remote server is unresponsive or slow to send data.
 **Prevention:** Always explicitly configure the `Timeout` field when initializing `http.Client` instances. In production code, use a safe global standard like `config.CgrConfig().GeneralCfg().ReplyTimeout`.
+## 2024-05-24 - Missing Timeout in `http.Client` Instantiations
+**Vulnerability:** Several `http.Client` instances in `engine/suretax.go` and `engine/action.go` were instantiated without configuring timeouts.
+**Learning:** In Go, default `http.Client` instances do not enforce a timeout, which means they can hang indefinitely if the external service fails to respond. This can lead to goroutine leaks and resource exhaustion attacks (a potential Denial of Service risk).
+**Prevention:** Always configure the `Timeout` field when initializing `http.Client` (e.g., using `config.CgrConfig().GeneralCfg().ReplyTimeout` where available) to enforce a strict upper bound on request durations.
+
+## 2024-05-24 - Missing HTTP Client Timeouts
+**Vulnerability:** Several `http.Client` instances in `engine/suretax.go`, `engine/action.go`, `ees/s3.go`, and `ees/sqs.go` were initialized without explicitly setting a `Timeout`.
+**Learning:** Default `http.Client` instances in Go do not enforce any request timeouts. This exposes the application to resource exhaustion vulnerabilities (denial-of-service) because network calls can hang indefinitely if the external service is slow or unreachable.
+**Prevention:** Always explicitly configure the `Timeout` field when initializing `http.Client`. In this application, a reusable pattern is to use the global configuration standard via `config.CgrConfig().GeneralCfg().ReplyTimeout`.
+## 2024-05-25 - Missing Timeout in HTTP Client
+**Vulnerability:** The HTTP clients in `engine/action.go` and `engine/suretax.go` were initialized using `&http.Client{}` without setting explicitly any timeout configurations such as `Timeout`.
+**Learning:** In Go, default `http.Client` instances do not enforce timeouts for requests. This leaves the application vulnerable to resource exhaustion from slow servers or network hangs, where the client will wait indefinitely for a response.
+**Prevention:** Always use explicit `http.Client` instantiation and configure the `Timeout` field to a safe default (e.g., `config.CgrConfig().GeneralCfg().ReplyTimeout`) when making outbound HTTP requests, except when interacting with systems that require long-polling or large transfers (like AWS S3/SQS).
