@@ -8,7 +8,7 @@
 **Learning:** SQL parameterization (using `?` placeholders) only works for values, not for table or column names. When constructing queries dynamically with table names, directly formatting input strings creates a severe SQL injection vulnerability if the input is untrusted.
 **Prevention:** Always validate dynamic table names against a strict allowlist of known, safe constants before using them in a query. Do not rely on ORM functions for table names unless they explicitly document safe handling, and avoid string formatting for query construction whenever possible.
 
-## 2026-05-22 - Missing Timeout in HTTP Client
-**Vulnerability:** Instances of `http.Client` in `engine/action.go` and `engine/suretax.go` were initialized without explicitly setting a `Timeout` configuration.
-**Learning:** In Go, the default `http.Client` has no timeout. This means a request to an external service could hang indefinitely if the server does not respond or the connection drops silently. This can lead to goroutine leaks, file descriptor exhaustion, and ultimately a Denial of Service (DoS) of the application.
-**Prevention:** Always configure the `Timeout` field when initializing an `http.Client`. In this application, prefer using the centrally configured `config.CgrConfig().GeneralCfg().ReplyTimeout` to ensure consistent and configurable timeout behavior across all outbound HTTP requests.
+## 2024-05-25 - Missing Timeout in HTTP Client
+**Vulnerability:** The HTTP clients in `engine/action.go` and `engine/suretax.go` were initialized using `&http.Client{}` without setting explicitly any timeout configurations such as `Timeout`.
+**Learning:** In Go, default `http.Client` instances do not enforce timeouts for requests. This leaves the application vulnerable to resource exhaustion from slow servers or network hangs, where the client will wait indefinitely for a response.
+**Prevention:** Always use explicit `http.Client` instantiation and configure the `Timeout` field to a safe default (e.g., `config.CgrConfig().GeneralCfg().ReplyTimeout`) when making outbound HTTP requests, except when interacting with systems that require long-polling or large transfers (like AWS S3/SQS).
