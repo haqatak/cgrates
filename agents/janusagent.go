@@ -149,6 +149,7 @@ func (ja *JanusAgent) authSession(origIP string) (err error) {
 }
 
 func (ja *JanusAgent) acntStartSession(s *janus.Session) (err error) {
+	s.Lock()
 	initArgs := &sessions.V1InitSessionArgs{
 		GetAttributes: true,
 		InitSession:   true,
@@ -166,6 +167,7 @@ func (ja *JanusAgent) acntStartSession(s *janus.Session) (err error) {
 		},
 		ForceDuration: true,
 	}
+	s.Unlock()
 	rply := new(sessions.V1InitSessionReply)
 	err = ja.connMgr.Call(ja.ctx, ja.cgrCfg.JanusAgentCfg().SessionSConns,
 		utils.SessionSv1InitiateSession,
@@ -174,6 +176,7 @@ func (ja *JanusAgent) acntStartSession(s *janus.Session) (err error) {
 }
 
 func (ja *JanusAgent) acntStopSession(s *janus.Session) (err error) {
+	s.Lock()
 	terminateArgs := &sessions.V1TerminateSessionArgs{
 		TerminateSession: true,
 		CGREvent: &utils.CGREvent{
@@ -191,6 +194,7 @@ func (ja *JanusAgent) acntStopSession(s *janus.Session) (err error) {
 		},
 		ForceDuration: true,
 	}
+	s.Unlock()
 	var rply string
 	err = ja.connMgr.Call(ja.ctx, ja.cgrCfg.JanusAgentCfg().SessionSConns,
 		utils.SessionSv1TerminateSession,
@@ -199,6 +203,7 @@ func (ja *JanusAgent) acntStopSession(s *janus.Session) (err error) {
 }
 
 func (ja *JanusAgent) cdrSession(s *janus.Session) (err error) {
+	s.Lock()
 	cgrEv := &utils.CGREvent{
 		Tenant: ja.cgrCfg.GeneralCfg().DefaultTenant,
 		ID:     utils.Sha1(),
@@ -212,6 +217,7 @@ func (ja *JanusAgent) cdrSession(s *janus.Session) (err error) {
 			utils.Usage:        s.Data[utils.Usage],
 		},
 	}
+	s.Unlock()
 	var rply string
 	err = ja.connMgr.Call(ja.ctx, ja.cgrCfg.JanusAgentCfg().SessionSConns,
 		utils.SessionSv1ProcessCDR,
@@ -349,12 +355,14 @@ func (ja *JanusAgent) AttachPlugin(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if msg.Type == "destroy" {
+		session.Lock()
 		answerTime, _ := utils.IfaceAsTime(session.Data[utils.AnswerTime], ja.cgrCfg.GeneralCfg().DefaultTimezone)
 		var totalDur time.Duration
 		if !answerTime.IsZero() {
 			totalDur = time.Since(answerTime)
 		}
 		session.Data[utils.Usage] = totalDur // toDo: lock session RW
+		session.Unlock()
 
 		go func() {
 			ja.acntStopSession(session)
