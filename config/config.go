@@ -178,6 +178,7 @@ func newCGRConfig(config []byte) (cfg *CGRConfig, err error) {
 	}
 	cfg.sipAgentCfg = new(SIPAgentCfg)
 	cfg.janusAgentCfg = new(JanusAgentCfg)
+	cfg.eRateAgentCfg = new(ERateAgentCfg)
 	cfg.configSCfg = new(ConfigSCfg)
 	cfg.apiBanCfg = new(APIBanCfg)
 	cfg.sentryPeerCfg = new(SentryPeerCfg)
@@ -332,6 +333,7 @@ type CGRConfig struct {
 	eesCfg             *EEsCfg             // EventExporter config
 	sipAgentCfg        *SIPAgentCfg        // SIPAgent config
 	janusAgentCfg      *JanusAgentCfg      // JanusAgent config
+	eRateAgentCfg      *ERateAgentCfg      // ERateAgent config
 	configSCfg         *ConfigSCfg         // ConfigS config
 	apiBanCfg          *APIBanCfg          // APIBan config
 	sentryPeerCfg      *SentryPeerCfg      //SentryPeer config
@@ -1294,6 +1296,7 @@ func (cfg *CGRConfig) getLoadFunctions() map[string]func(*CgrJsonCfg) error {
 		RPCConnsJsonName:    cfg.loadRPCConns,
 		SIPAgentJson:        cfg.loadSIPAgentCfg,
 		JanusAgentJson:      cfg.loadJanusAgentCfg,
+		ERateAgentJson:      cfg.loadERateAgentCfg,
 		TemplatesJson:       cfg.loadTemplateSCfg,
 		ConfigSJson:         cfg.loadConfigSCfg,
 		APIBanCfgJson:       cfg.loadAPIBanCgrCfg,
@@ -1541,6 +1544,8 @@ func (cfg *CGRConfig) reloadSections(sections ...string) {
 			cfg.rldChans[THRESHOLDS_JSON] <- struct{}{}
 		case RouteSJson:
 			cfg.rldChans[RouteSJson] <- struct{}{}
+		case ERateAgentJson:
+			cfg.rldChans[ERateAgentJson] <- struct{}{}
 		case JanusAgentJson:
 			cfg.rldChans[JanusAgentJson] <- struct{}{}
 		case DispatcherSJson:
@@ -1891,6 +1896,8 @@ func (cfg *CGRConfig) V1GetConfigAsJSON(ctx *context.Context, args *SectionWithA
 		mp = cfg.RadiusAgentCfg().AsMapInterface(cfg.GeneralCfg().RSRSep)
 	case DNSAgentJson:
 		mp = cfg.DNSAgentCfg().AsMapInterface(cfg.GeneralCfg().RSRSep)
+	case ERateAgentJson:
+		mp = map[string]interface{}{"enabled": cfg.eRateAgentCfg.Enabled}
 	case JanusAgentJson:
 		mp = cfg.JanusAgentCfg().AsMapInterface(cfg.GeneralCfg().RSRSep)
 	case PrometheusAgentJSON:
@@ -2020,6 +2027,7 @@ func (cfg *CGRConfig) Clone() (cln *CGRConfig) {
 		sessionSCfg:        cfg.sessionSCfg.Clone(),
 		fsAgentCfg:         cfg.fsAgentCfg.Clone(),
 		janusAgentCfg:      cfg.janusAgentCfg.Clone(),
+		eRateAgentCfg:      cfg.eRateAgentCfg.Clone(),
 		kamAgentCfg:        cfg.kamAgentCfg.Clone(),
 		asteriskAgentCfg:   cfg.asteriskAgentCfg.Clone(),
 		diameterAgentCfg:   cfg.diameterAgentCfg.Clone(),
@@ -2078,4 +2086,22 @@ func (cfg *CGRConfig) GetDataProvider() utils.MapStorage {
 		cfg.cacheDPMux.Unlock()
 	}
 	return val
+}
+
+func (cfg *CGRConfig) loadERateAgentCfg(jsnCfg *CgrJsonCfg) (err error) {
+	var jsnERateAgentCfg *ERateAgentCfg
+	if jsnERateAgentCfg, err = jsnCfg.ERateAgentCfgJson(); err != nil {
+		return
+	}
+	if jsnERateAgentCfg != nil {
+		cfg.eRateAgentCfg.Enabled = jsnERateAgentCfg.Enabled
+	}
+	return nil
+}
+
+// ERateAgentCfg reads the ERateAgent configuration
+func (cfg *CGRConfig) ERateAgentCfg() *ERateAgentCfg {
+	cfg.lks[ERateAgentJson].Lock()
+	defer cfg.lks[ERateAgentJson].Unlock()
+	return cfg.eRateAgentCfg
 }

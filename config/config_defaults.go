@@ -1154,6 +1154,11 @@ const CGRATES_CFG_JSON = `
 },
 
 
+"erate_agent": {
+	"enabled": false
+},
+
+
 "janus_agent": {
 	"enabled": false,				// enables the Janus agent: <true|false>
 	"url": "/janus",

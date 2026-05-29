@@ -3,7 +3,12 @@
 **Learning:** In Go, default `http.Server` instances do not enforce timeouts for reading request headers. This leaves the application vulnerable to resource exhaustion from slow-client attacks (like Slowloris), where attackers hold connections open by sending headers very slowly.
 **Prevention:** Always use explicit `http.Server` instantiation and configure timeout fields, particularly `ReadHeaderTimeout`, to safe defaults (e.g., 10 seconds) when exposing HTTP/HTTPS endpoints.
 
-## 2024-05-24 - Missing Timeout in HTTP Clients
-**Vulnerability:** HTTP clients in `ees/s3.go`, `ees/sqs.go`, `engine/action.go`, and `engine/suretax.go` were initialized without an explicit `Timeout` setting.
-**Learning:** Default `http.Client` instances in Go have no timeout, meaning a slow or unresponsive server can cause the client connection to hang indefinitely, leading to resource exhaustion (e.g., file descriptor or goroutine leaks) and potential Denial of Service (DoS).
-**Prevention:** Always configure the `Timeout` field when creating an `http.Client`. Use the application's global configuration where available, such as `config.CgrConfig().GeneralCfg().ReplyTimeout`.
+## 2026-05-10 - Dynamic Table Name SQL Injection
+**Vulnerability:** In `engine/storage_sql.go` inside the `GetTpIds(colName string)` method, the `colName` argument was directly formatted into a SQL query string (`fmt.Sprintf(" (SELECT tpid FROM %s)", colName)`) without any validation or parameterization.
+**Learning:** SQL parameterization (using `?` placeholders) only works for values, not for table or column names. When constructing queries dynamically with table names, directly formatting input strings creates a severe SQL injection vulnerability if the input is untrusted.
+**Prevention:** Always validate dynamic table names against a strict allowlist of known, safe constants before using them in a query. Do not rely on ORM functions for table names unless they explicitly document safe handling, and avoid string formatting for query construction whenever possible.
+
+## 2024-05-25 - Missing Timeout in HTTP Client
+**Vulnerability:** The HTTP clients in `engine/action.go` and `engine/suretax.go` were initialized using `&http.Client{}` without setting explicitly any timeout configurations such as `Timeout`.
+**Learning:** In Go, default `http.Client` instances do not enforce timeouts for requests. This leaves the application vulnerable to resource exhaustion from slow servers or network hangs, where the client will wait indefinitely for a response.
+**Prevention:** Always use explicit `http.Client` instantiation and configure the `Timeout` field to a safe default (e.g., `config.CgrConfig().GeneralCfg().ReplyTimeout`) when making outbound HTTP requests, except when interacting with systems that require long-polling or large transfers (like AWS S3/SQS).
