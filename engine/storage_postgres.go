@@ -20,6 +20,7 @@ package engine
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cgrates/cgrates/utils"
@@ -62,7 +63,7 @@ func NewPostgresStorage(host, port, name, user, password, pgSchema,
 		return nil, err
 	}
 	if pgSchema != "" {
-		pgStor.Db.Exec(fmt.Sprintf("set search_path='%s'", pgSchema))
+		pgStor.Db.Exec(fmt.Sprintf("set search_path='%s'", strings.ReplaceAll(pgSchema, "'", "''")))
 	}
 	pgStor.Db.SetMaxIdleConns(maxIdleConn)
 	pgStor.Db.SetMaxOpenConns(maxConn)
