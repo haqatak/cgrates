@@ -21,7 +21,6 @@ package sessions
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"runtime"
 	"slices"
 	"strings"
@@ -251,7 +250,7 @@ func (sS *SessionS) setSTerminator(s *Session, opts engine.MapEvent) {
 	}
 	if maxDelay != 0 {
 		ttl += time.Duration(
-			rand.Int63n(maxDelay.Milliseconds()) * time.Millisecond.Nanoseconds())
+			utils.RandomInteger(0, maxDelay.Milliseconds()) * time.Millisecond.Nanoseconds())
 	}
 	// LastUsed
 	var ttlLastUsed *time.Duration
@@ -1573,7 +1572,7 @@ func (sS *SessionS) terminateSyncSessions(toBeRemoved []string) {
 		var eUsage time.Duration
 		if sS.cgrCfg.SessionSCfg().StaleChanMaxExtraUsage > 0 { // add extra usage
 			eUsage += time.Duration(
-				rand.Int63n(sS.cgrCfg.SessionSCfg().StaleChanMaxExtraUsage.Milliseconds()) * time.Millisecond.Nanoseconds())
+				utils.RandomInteger(0, sS.cgrCfg.SessionSCfg().StaleChanMaxExtraUsage.Milliseconds()) * time.Millisecond.Nanoseconds())
 		}
 		ss[0].Lock()
 		if err := sS.forceSTerminate(ss[0], eUsage, nil, nil, nil,

@@ -19,8 +19,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 package engine
 
 import (
-	"math/rand"
 	"sort"
+
 
 	"maps"
 
@@ -78,9 +78,10 @@ func (dHPrfls DispatcherHostProfiles) ReorderFromIndex(idx int) {
 
 // Shuffle will mix the connections in place
 func (dHPrfls DispatcherHostProfiles) Shuffle() {
-	rand.Shuffle(len(dHPrfls), func(i, j int) {
+	for i := len(dHPrfls) - 1; i > 0; i-- {
+		j := int(utils.RandomInteger(0, int64(i+1)))
 		dHPrfls[i], dHPrfls[j] = dHPrfls[j], dHPrfls[i]
-	})
+	}
 }
 
 func (dHPrfls DispatcherHostProfiles) Clone() (cln DispatcherHostProfiles) {
@@ -227,9 +228,10 @@ func (dHPrflIDs DispatcherHostIDs) ReorderFromIndex(idx int) {
 
 // Shuffle will mix the connections in place
 func (dHPrflIDs DispatcherHostIDs) Shuffle() {
-	rand.Shuffle(len(dHPrflIDs), func(i, j int) {
+	for i := len(dHPrflIDs) - 1; i > 0; i-- {
+		j := int(utils.RandomInteger(0, int64(i+1)))
 		dHPrflIDs[i], dHPrflIDs[j] = dHPrflIDs[j], dHPrflIDs[i]
-	})
+	}
 }
 
 func (dHPrflIDs DispatcherHostIDs) Clone() (cln DispatcherHostIDs) {
