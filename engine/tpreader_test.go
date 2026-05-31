@@ -1781,18 +1781,18 @@ func TestTPReaderLoadAccountActionsFilteredErr(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if err := tpr.LoadAccountActionsFiltered(qried); err == nil || err.Error() != fmt.Sprintf("%v: %+v", utils.ErrNotFound.Error(), qried) {
+	if _, err := tpr.LoadAccountActionsFiltered(qried); err == nil || err.Error() != fmt.Sprintf("%v: %+v", utils.ErrNotFound.Error(), qried) {
 		t.Error(err)
 	}
 	db.db.Set(utils.CacheTBLTPAccountActions, "tp_Id:item", &utils.TPAccountActions{TPid: utils.TestSQL, LoadId: utils.TestSQL, Tenant: "cgrates.org",
 		Account: "1001", ActionPlanId: "PREPAID_10", ActionTriggersId: "STANDARD_TRIGGERS"}, []string{"grpId"}, true, utils.NonTransactional)
 	db.db.Set(utils.CacheTBLTPAccountActions, "tp_Id:item2", &utils.TPAccountActions{TPid: utils.TestSQL, LoadId: utils.TestSQL, Tenant: "cgrates.org",
 		Account: "1001", ActionPlanId: "PREPAID_10", ActionTriggersId: "STANDARD_TRIGGERS"}, []string{"grpId"}, true, utils.NonTransactional)
-	if err := tpr.LoadAccountActionsFiltered(qried); err == nil || err.Error() != fmt.Sprintf("Non unique ID %+v", utils.ConcatenatedKey("cgrates.org", "1001")) {
+	if _, err := tpr.LoadAccountActionsFiltered(qried); err == nil || err.Error() != fmt.Sprintf("Non unique ID %+v", utils.ConcatenatedKey("cgrates.org", "1001")) {
 		t.Error(err)
 	}
 	db.db.Remove(utils.CacheTBLTPAccountActions, "tp_Id:item2", true, utils.NonTransactional)
-	if err := tpr.LoadAccountActionsFiltered(qried); err == nil || err.Error() != fmt.Sprint(utils.ErrNotFound.Error()+" (ActionPlan): "+"PREPAID_10") {
+	if _, err := tpr.LoadAccountActionsFiltered(qried); err == nil || err.Error() != fmt.Sprint(utils.ErrNotFound.Error()+" (ActionPlan): "+"PREPAID_10") {
 		t.Error(err)
 	}
 	db.db.Set(utils.CacheTBLTPActionPlans, "*prf:PREPAID_10", &utils.TPActionPlan{
@@ -2414,7 +2414,7 @@ func TestTprLoadAccountActionFiltered(t *testing.T) {
 	})
 
 	SetConnManager(connMgr)
-	if err := tpr.LoadAccountActionsFiltered(qriedAA); err == nil {
+	if _, err := tpr.LoadAccountActionsFiltered(qriedAA); err == nil {
 		t.Error(err)
 	}
 	//unfinished

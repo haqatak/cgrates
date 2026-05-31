@@ -688,15 +688,16 @@ func (tpr *TpReader) LoadActionTriggers() (err error) {
 	return nil
 }
 
-func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions) error {
+func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions) ([]string, error) {
 	accountActions, err := tpr.lr.GetTPAccountActions(qriedAA)
 	if err != nil {
-		return errors.New(err.Error() + ": " + fmt.Sprintf("%+v", qriedAA))
+		return nil, errors.New(err.Error() + ": " + fmt.Sprintf("%+v", qriedAA))
 	}
 	storAas, err := MapTPAccountActions(accountActions)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var allActionIDs []string
 	for _, accountAction := range storAas {
 		id := accountAction.KeyId()
 		var actionIDs []string // collects action ids
@@ -711,9 +712,9 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 
 			tpap, err := tpr.lr.GetTPActionPlans(tpr.tpid, accountAction.ActionPlanId)
 			if err != nil {
-				return errors.New(err.Error() + " (ActionPlan): " + accountAction.ActionPlanId)
+				return nil, errors.New(err.Error() + " (ActionPlan): " + accountAction.ActionPlanId)
 			} else if len(tpap) == 0 {
-				return fmt.Errorf("no action plan with id %q", accountAction.ActionPlanId)
+				return nil, fmt.Errorf("no action plan with id %q", accountAction.ActionPlanId)
 			}
 			aps := MapTPActionTimings(tpap)
 			var actionPlan *ActionPlan
@@ -722,21 +723,21 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 				// Check action exists before saving it inside actionTiming key
 				// ToDo: try saving the key after the actions was retrieved in order to save one query here.
 				if actions, err := tpr.lr.GetTPActions(tpr.tpid, at.ActionsId); err != nil {
-					return errors.New(err.Error() + " (Actions): " + at.ActionsId)
+					return nil, errors.New(err.Error() + " (Actions): " + at.ActionsId)
 				} else if len(actions) == 0 {
-					return fmt.Errorf("no action with id %q", at.ActionsId)
+					return nil, fmt.Errorf("no action with id %q", at.ActionsId)
 				}
 				var t *utils.TPTiming
 				if at.TimingId != utils.MetaASAP {
 					tptm, err := tpr.lr.GetTPTimings(tpr.tpid, at.TimingId)
 					if err != nil {
-						return errors.New(err.Error() + " (Timing): " + at.TimingId)
+						return nil, errors.New(err.Error() + " (Timing): " + at.TimingId)
 					} else if len(tptm) == 0 {
-						return fmt.Errorf("no timing with id %q", at.TimingId)
+						return nil, fmt.Errorf("no timing with id %q", at.TimingId)
 					}
 					tm, err := MapTPTimings(tptm)
 					if err != nil {
-						return err
+						return nil, err
 					}
 					t = tm[at.TimingId]
 				} else {
@@ -776,17 +777,17 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 							ActionsID: at.ActionsID,
 						}
 						if err = tpr.dm.DataDB().PushTask(t); err != nil {
-							return err
+							return nil, err
 						}
 					}
 				}
 			}
 			// write action plan
 			if err = tpr.dm.SetActionPlan(accountAction.ActionPlanId, actionPlan, false, utils.NonTransactional); err != nil {
-				return errors.New(err.Error() + " (SetActionPlan): " + accountAction.ActionPlanId)
+				return nil, errors.New(err.Error() + " (SetActionPlan): " + accountAction.ActionPlanId)
 			}
 			if err = tpr.dm.SetAccountActionPlans(id, []string{accountAction.ActionPlanId}, false); err != nil {
-				return err
+				return nil, err
 			}
 			var reply string
 			if err := connMgr.Call(context.TODO(), tpr.cacheConns,
@@ -794,7 +795,7 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 					AccountActionPlanIDs: []string{id},
 					ActionPlanIDs:        []string{accountAction.ActionPlanId},
 				}, &reply); err != nil {
-				return err
+				return nil, err
 			}
 
 		}
@@ -804,7 +805,7 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 		if accountAction.ActionTriggersId != "" {
 			tpatrs, err := tpr.lr.GetTPActionTriggers(tpr.tpid, accountAction.ActionTriggersId)
 			if err != nil {
-				return errors.New(err.Error() + " (ActionTriggers): " + accountAction.ActionTriggersId)
+				return nil, errors.New(err.Error() + " (ActionTriggers): " + accountAction.ActionTriggersId)
 			}
 			atrs := MapTPActionTriggers(tpatrs)
 			atrsMap := make(map[string][]*ActionTrigger)
@@ -841,14 +842,14 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 					if atr.BalanceWeight != "" && atr.BalanceWeight != utils.MetaAny {
 						u, err := strconv.ParseFloat(atr.BalanceWeight, 64)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						atrs[idx].Balance.Weight = utils.Float64Pointer(u)
 					}
 					if atr.BalanceExpirationDate != "" && atr.BalanceExpirationDate != utils.MetaAny && atr.ExpirationDate != utils.MetaUnlimited {
 						u, err := utils.ParseTimeDetectLayout(atr.BalanceExpirationDate, tpr.timezone)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						atrs[idx].Balance.ExpirationDate = utils.TimePointer(u)
 					}
@@ -871,14 +872,14 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 					if atr.BalanceBlocker != "" && atr.BalanceBlocker != utils.MetaAny {
 						u, err := strconv.ParseBool(atr.BalanceBlocker)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						atrs[idx].Balance.Blocker = utils.BoolPointer(u)
 					}
 					if atr.BalanceDisabled != "" && atr.BalanceDisabled != utils.MetaAny {
 						u, err := strconv.ParseBool(atr.BalanceDisabled)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						atrs[idx].Balance.Disabled = utils.BoolPointer(u)
 					}
@@ -893,14 +894,14 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 			// write action triggers
 			if err = tpr.dm.SetActionTriggers(accountAction.ActionTriggersId,
 				actionTriggers); err != nil {
-				return errors.New(err.Error() + " (SetActionTriggers): " + accountAction.ActionTriggersId)
+				return nil, errors.New(err.Error() + " (SetActionTriggers): " + accountAction.ActionTriggersId)
 			}
 			var reply string
 			if err := connMgr.Call(context.TODO(), tpr.cacheConns,
 				utils.CacheSv1ReloadCache, &utils.AttrReloadCacheWithAPIOpts{
 					ActionTriggerIDs: []string{accountAction.ActionTriggersId},
 				}, &reply); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
@@ -909,7 +910,7 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 		for _, actID := range actionIDs {
 			tpas, err := tpr.lr.GetTPActions(tpr.tpid, actID)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			as := MapTPActions(tpas)
 			for tag, tpacts := range as {
@@ -921,7 +922,7 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 						fltrs = strings.Split(tpact.Filters, utils.InfieldSep)
 					}
 					if err = verifyInlineFilterS(fltrs); err != nil {
-						return fmt.Errorf("error parsing action %s filter field: %v", tag, err)
+						return nil, fmt.Errorf("error parsing action %s filter field: %v", tag, err)
 					}
 					acts[idx] = &Action{
 						Id:         tag,
@@ -943,7 +944,7 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 					if tpact.Units != "" && tpact.Units != utils.MetaAny {
 						vf, err := utils.ParseBalanceFilterValue(tpact.BalanceType, tpact.Units)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						acts[idx].Balance.Value = vf
 					}
@@ -951,7 +952,7 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 					if tpact.BalanceWeight != "" && tpact.BalanceWeight != utils.MetaAny {
 						u, err := utils.BalanceWeightAsFloat64(tpact.BalanceWeight)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						acts[idx].Balance.Weight = utils.Float64Pointer(u)
 					}
@@ -974,14 +975,14 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 					if tpact.BalanceBlocker != "" && tpact.BalanceBlocker != utils.MetaAny {
 						u, err := strconv.ParseBool(tpact.BalanceBlocker)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						acts[idx].Balance.Blocker = utils.BoolPointer(u)
 					}
 					if tpact.BalanceDisabled != "" && tpact.BalanceDisabled != utils.MetaAny {
 						u, err := strconv.ParseBool(tpact.BalanceDisabled)
 						if err != nil {
-							return err
+							return nil, err
 						}
 						acts[idx].Balance.Disabled = utils.BoolPointer(u)
 					}
@@ -1000,7 +1001,7 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 									EndTime:   timing.EndTime,
 								})
 							} else {
-								return fmt.Errorf("could not find timing: %q", timingID)
+								return nil, fmt.Errorf("could not find timing: %q", timingID)
 							}
 						}
 					}
@@ -1011,15 +1012,9 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 		// write actions
 		for k, as := range facts {
 			if err = tpr.dm.SetActions(k, as); err != nil {
-				return err
+				return nil, err
 			}
-			var reply string
-			if err := connMgr.Call(context.TODO(), tpr.cacheConns,
-				utils.CacheSv1ReloadCache, &utils.AttrReloadCacheWithAPIOpts{
-					ActionIDs: []string{k},
-				}, &reply); err != nil {
-				return err
-			}
+			allActionIDs = append(allActionIDs, k)
 		}
 		ub, err := tpr.dm.GetAccount(id)
 		if err != nil {
@@ -1031,10 +1026,10 @@ func (tpr *TpReader) LoadAccountActionsFiltered(qriedAA *utils.TPAccountActions)
 		// init counters
 		ub.InitCounters()
 		if err := tpr.dm.SetAccount(ub); err != nil {
-			return err
+			return nil, err
 		}
-	}
-	return nil
+		}
+	return allActionIDs, nil
 }
 
 func (tpr *TpReader) LoadAccountActions() (err error) {
