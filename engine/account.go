@@ -997,15 +997,18 @@ func (acc *Account) GetSharedGroups() (groups []string) {
 	return
 }
 
-// GetUniqueSharedGroupMembers returns the acounts from the group
-func (acc *Account) GetUniqueSharedGroupMembers(cd *CallDescriptor) (utils.StringMap, error) { // ToDo: make sure we return accountIDs
+// GetUniqueSharedGroupMembers returns the accounts from the group
+func (acc *Account) GetUniqueSharedGroupMembers(cd *CallDescriptor) (utils.StringMap, error) {
 	var balances []*Balance
 	balances = append(balances, acc.getBalancesForPrefix(cd.Destination, cd.Category, utils.MetaMonetary, "", cd.TimeStart)...)
 	balances = append(balances, acc.getBalancesForPrefix(cd.Destination, cd.Category, cd.ToR, "", cd.TimeStart)...)
 	// gather all shared group ids
 	var sharedGroupIds []string
 	for _, b := range balances {
-		for sg := range b.SharedGroups {
+		for sg, active := range b.SharedGroups {
+			if !active {
+				continue
+			}
 			sharedGroupIds = append(sharedGroupIds, sg)
 		}
 	}
@@ -1016,7 +1019,10 @@ func (acc *Account) GetUniqueSharedGroupMembers(cd *CallDescriptor) (utils.Strin
 			utils.Logger.Warning(fmt.Sprintf("Could not get shared group: %v", sgID))
 			return nil, err
 		}
-		for memberID := range sharedGroup.MemberIds {
+		for memberID, active := range sharedGroup.MemberIds {
+			if !active {
+				continue
+			}
 			memberIds[memberID] = true
 		}
 	}
