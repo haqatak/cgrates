@@ -243,7 +243,14 @@ func messageSetAVPsWithPath(m *diam.Message, pathStr []string,
 			typeVal = &diam.GroupedAVP{
 				AVP: []*diam.AVP{msgAVP}}
 		}
-		msgAVP = diam.NewAVP(dictAVPs[i].Code, avp.Mbit, dictAVPs[i].VendorID, typeVal) // FixMe: maybe Mbit with dictionary one
+		var flags uint8
+		if strings.Contains(dictAVPs[i].Must, "M") {
+			flags |= avp.Mbit
+		}
+		if dictAVPs[i].VendorID > 0 {
+			flags |= avp.Vbit
+		}
+		msgAVP = diam.NewAVP(dictAVPs[i].Code, flags, dictAVPs[i].VendorID, typeVal)
 		if i > 0 && !newBranch {
 			avps, err := m.FindAVPsWithPath(path[:i], dict.UndefinedVendorID)
 			if err != nil {
