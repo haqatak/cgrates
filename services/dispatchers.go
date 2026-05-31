@@ -138,157 +138,41 @@ func (dspS *DispatcherService) ShouldRun() bool {
 func newDispatcherServiceMap(val *dispatchers.DispatcherService) (engine.IntService, error) {
 	srvMap := make(engine.IntService)
 
-	srv, err := birpc.NewService(v1.NewDispatcherAttributeSv1(val),
-		utils.AttributeSv1, true)
-	if err != nil {
-		return nil, err
+	services := []struct {
+		rcvr interface{}
+		name string
+	}{
+		{v1.NewDispatcherAttributeSv1(val), utils.AttributeSv1},
+		{v1.NewDispatcherCacheSv1(val), utils.CacheSv1},
+		{v1.NewDispatcherSCDRsV1(val), utils.CDRsV1},
+		{v2.NewDispatcherSCDRsV2(val), utils.CDRsV2},
+		{v1.NewDispatcherChargerSv1(val), utils.ChargerSv1},
+		{v1.NewDispatcherConfigSv1(val), utils.ConfigSv1},
+		{v1.NewDispatcherCoreSv1(val), utils.CoreSv1},
+		{v1.NewDispatcherSv1(val), utils.DispatcherSv1},
+		{v1.NewDispatcherEeSv1(val), utils.EeSv1},
+		{v1.NewDispatcherErSv1(val), utils.ErSv1},
+		{v1.NewDispatcherGuardianSv1(val), utils.GuardianSv1},
+		{v1.NewDispatcherRALsV1(val), utils.RALsV1},
+		{v1.NewDispatcherReplicatorSv1(val), utils.ReplicatorSv1},
+		{v1.NewDispatcherResourceSv1(val), utils.ResourceSv1},
+		{v1.NewDispatcherThresholdSv1(val), utils.ThresholdSv1},
+		{v1.NewDispatcherRankingSv1(val), utils.RankingSv1},
+		{v1.NewDispatcherTrendSv1(val), utils.TrendSv1},
+		{v1.NewDispatcherResponder(val), utils.Responder},
+		{v1.NewDispatcherRouteSv1(val), utils.RouteSv1},
+		{v1.NewDispatcherSchedulerSv1(val), utils.SchedulerSv1},
+		{v1.NewDispatcherSessionSv1(val), utils.SessionSv1},
+		{v1.NewDispatcherStatSv1(val), utils.StatSv1},
 	}
-	srvMap[srv.Name] = srv
 
-	srv, err = birpc.NewService(v1.NewDispatcherCacheSv1(val),
-		utils.CacheSv1, true)
-	if err != nil {
-		return nil, err
+	for _, s := range services {
+		srv, err := birpc.NewService(s.rcvr, s.name, true)
+		if err != nil {
+			return nil, err
+		}
+		srvMap[srv.Name] = srv
 	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherSCDRsV1(val),
-		utils.CDRsV1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v2.NewDispatcherSCDRsV2(val),
-		utils.CDRsV2, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherChargerSv1(val),
-		utils.ChargerSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherConfigSv1(val),
-		utils.ConfigSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherCoreSv1(val),
-		utils.CoreSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherSv1(val),
-		utils.DispatcherSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherEeSv1(val),
-		utils.EeSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherErSv1(val),
-		utils.ErSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherGuardianSv1(val),
-		utils.GuardianSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherRALsV1(val),
-		utils.RALsV1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherReplicatorSv1(val),
-		utils.ReplicatorSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherResourceSv1(val),
-		utils.ResourceSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherThresholdSv1(val),
-		utils.ThresholdSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherRankingSv1(val), utils.RankingSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherTrendSv1(val), utils.TrendSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherResponder(val),
-		utils.Responder, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherRouteSv1(val),
-		utils.RouteSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherSchedulerSv1(val),
-		utils.SchedulerSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherSessionSv1(val),
-		utils.SessionSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
-
-	srv, err = birpc.NewService(v1.NewDispatcherStatSv1(val),
-		utils.StatSv1, true)
-	if err != nil {
-		return nil, err
-	}
-	srvMap[srv.Name] = srv
 
 	return srvMap, nil
 }
