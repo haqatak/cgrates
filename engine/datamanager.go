@@ -28,6 +28,7 @@ import (
 	"github.com/cgrates/cgrates/config"
 	"github.com/cgrates/cgrates/guardian"
 	"github.com/cgrates/cgrates/utils"
+	"sync"
 )
 
 var (
@@ -103,6 +104,7 @@ func NewDataManager(dataDB DataDB, cacheCfg *config.CacheCfg, connMgr *ConnManag
 // DataManager is the data storage manager for CGRateS
 // transparently manages data retrieval, further serialization and caching
 type DataManager struct {
+	dbMux      sync.RWMutex
 	dataDB     DataDB
 	cacheCfg   *config.CacheCfg
 	connMgr    *ConnManager
@@ -112,12 +114,16 @@ type DataManager struct {
 
 func (dm *DataManager) Close() {
 	dm.replicator.close()
-	dm.dataDB.Close()
+	if db := dm.DataDB(); db != nil {
+		db.Close()
+	}
 }
 
 // DataDB exports access to dataDB
 func (dm *DataManager) DataDB() DataDB {
 	if dm != nil {
+		dm.dbMux.RLock()
+		defer dm.dbMux.RUnlock()
 		return dm.dataDB
 	}
 	return nil
@@ -330,11 +336,11 @@ func (dm *DataManager) CacheDataFromDB(prfx string, ids []string, mustBeCached b
 func (dm *DataManager) RebuildReverseForPrefix(prefix string) (err error) {
 	switch prefix {
 	case utils.ReverseDestinationPrefix:
-		if err = dm.dataDB.RemoveKeysForPrefix(prefix); err != nil {
+		if err = dm.DataDB().RemoveKeysForPrefix(prefix); err != nil {
 			return
 		}
 		var keys []string
-		if keys, err = dm.dataDB.GetKeysForPrefix(utils.DestinationPrefix, utils.EmptyString); err != nil {
+		if keys, err = dm.DataDB().GetKeysForPrefix(utils.DestinationPrefix, utils.EmptyString); err != nil {
 			return
 		}
 		for _, key := range keys {
@@ -347,11 +353,11 @@ func (dm *DataManager) RebuildReverseForPrefix(prefix string) (err error) {
 			}
 		}
 	case utils.AccountActionPlansPrefix:
-		if err = dm.dataDB.RemoveKeysForPrefix(prefix); err != nil {
+		if err = dm.DataDB().RemoveKeysForPrefix(prefix); err != nil {
 			return
 		}
 		var keys []string
-		if keys, err = dm.dataDB.GetKeysForPrefix(utils.ActionPlanPrefix, utils.EmptyString); err != nil {
+		if keys, err = dm.DataDB().GetKeysForPrefix(utils.ActionPlanPrefix, utils.EmptyString); err != nil {
 			return
 		}
 		accIDs := make(map[string][]string)
@@ -389,7 +395,7 @@ func (dm *DataManager) GetDestination(key string, cacheRead, cacheWrite bool, tr
 			return x.(*Destination), nil
 		}
 	}
-	dest, err = dm.dataDB.GetDestinationDrv(key, transactionID)
+	dest, err = dm.DataDB().GetDestinationDrv(key, transactionID)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaDestinations]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -400,7 +406,7 @@ func (dm *DataManager) GetDestination(key string, cacheRead, cacheWrite bool, tr
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &dest); err == nil {
-				err = dm.dataDB.SetDestinationDrv(dest, utils.NonTransactional)
+				err = dm.DataDB().SetDestinationDrv(dest, utils.NonTransactional)
 			}
 		}
 		if err != nil {
@@ -427,7 +433,7 @@ func (dm *DataManager) SetDestination(dest *Destination, transactionID string) (
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.SetDestinationDrv(dest, transactionID); err != nil {
+	if err = dm.DataDB().SetDestinationDrv(dest, transactionID); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaDestinations]
@@ -453,7 +459,7 @@ func (dm *DataManager) RemoveDestination(destID string, transactionID string) (e
 		return
 	}
 
-	if err = dm.dataDB.RemoveDestinationDrv(destID, transactionID); err != nil {
+	if err = dm.DataDB().RemoveDestinationDrv(destID, transactionID); err != nil {
 		return
 	}
 	if err = Cache.Remove(utils.CacheDestinations, destID,
@@ -464,7 +470,7 @@ func (dm *DataManager) RemoveDestination(destID string, transactionID string) (e
 		return utils.ErrNotFound
 	}
 	for _, prfx := range oldDst.Prefixes {
-		if err = dm.dataDB.RemoveReverseDestinationDrv(destID, prfx, transactionID); err != nil {
+		if err = dm.DataDB().RemoveReverseDestinationDrv(destID, prfx, transactionID); err != nil {
 			return
 		}
 		dm.GetReverseDestination(prfx, false, true, transactionID) // it will recache the destination
@@ -487,7 +493,7 @@ func (dm *DataManager) SetReverseDestination(destID string, prefixes []string, t
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.SetReverseDestinationDrv(destID, prefixes, transactionID); err != nil {
+	if err = dm.DataDB().SetReverseDestinationDrv(destID, prefixes, transactionID); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaReverseDestinations]
@@ -516,7 +522,7 @@ func (dm *DataManager) GetReverseDestination(prefix string,
 			return x.([]string), nil
 		}
 	}
-	ids, err = dm.dataDB.GetReverseDestinationDrv(prefix, transactionID)
+	ids, err = dm.DataDB().GetReverseDestinationDrv(prefix, transactionID)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaReverseDestinations]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -527,7 +533,7 @@ func (dm *DataManager) GetReverseDestination(prefix string,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &ids); err == nil {
-				err = dm.dataDB.SetReverseDestinationDrv(prefix, ids, transactionID)
+				err = dm.DataDB().SetReverseDestinationDrv(prefix, ids, transactionID)
 			}
 		}
 		if err != nil {
@@ -556,7 +562,7 @@ func (dm *DataManager) UpdateReverseDestination(oldDest, newDest *Destination,
 		return utils.ErrNoDatabaseConn
 	}
 	if oldDest == nil {
-		return dm.dataDB.SetReverseDestinationDrv(newDest.Id, newDest.Prefixes, transactionID)
+		return dm.DataDB().SetReverseDestinationDrv(newDest.Id, newDest.Prefixes, transactionID)
 	}
 
 	cCommit := cacheCommit(transactionID)
@@ -570,7 +576,7 @@ func (dm *DataManager) UpdateReverseDestination(oldDest, newDest *Destination,
 			}
 		}
 		if !found {
-			if err = dm.dataDB.RemoveReverseDestinationDrv(newDest.Id, oldPrefix, transactionID); err != nil {
+			if err = dm.DataDB().RemoveReverseDestinationDrv(newDest.Id, oldPrefix, transactionID); err != nil {
 				return
 			}
 			if err = Cache.Remove(utils.CacheReverseDestinations, oldPrefix,
@@ -600,7 +606,7 @@ func (dm *DataManager) GetAccount(id string) (acc *Account, err error) {
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	acc, err = dm.dataDB.GetAccountDrv(id)
+	acc, err = dm.DataDB().GetAccountDrv(id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaAccounts]; err == utils.ErrNotFound &&
 			itm.Remote {
@@ -614,7 +620,7 @@ func (dm *DataManager) GetAccount(id string) (acc *Account, err error) {
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &acc); err == nil {
-				err = dm.dataDB.SetAccountDrv(acc)
+				err = dm.DataDB().SetAccountDrv(acc)
 			}
 		}
 		if err != nil {
@@ -629,7 +635,7 @@ func (dm *DataManager) SetAccount(acc *Account) error {
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err := dm.dataDB.SetAccountDrv(acc); err != nil {
+	if err := dm.DataDB().SetAccountDrv(acc); err != nil {
 		return err
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaAccounts]
@@ -645,7 +651,7 @@ func (dm *DataManager) RemoveAccount(id string) error {
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err := dm.dataDB.RemoveAccountDrv(id); err != nil {
+	if err := dm.DataDB().RemoveAccountDrv(id); err != nil {
 		return err
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaAccounts]
@@ -690,7 +696,7 @@ func (dm *DataManager) GetFilter(tenant, id string, cacheRead, cacheWrite bool,
 							utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 								config.CgrConfig().GeneralCfg().NodeID)),
 					}, &fltr); err == nil {
-					err = dm.dataDB.SetFilterDrv(fltr)
+					err = dm.DataDB().SetFilterDrv(fltr)
 				}
 			}
 			if err != nil {
@@ -805,7 +811,7 @@ func (dm *DataManager) GetThreshold(tenant, id string,
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	th, err = dm.dataDB.GetThresholdDrv(tenant, id)
+	th, err = dm.DataDB().GetThresholdDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaThresholds]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -815,7 +821,7 @@ func (dm *DataManager) GetThreshold(tenant, id string,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &th); err == nil {
-				err = dm.dataDB.SetThresholdDrv(th)
+				err = dm.DataDB().SetThresholdDrv(th)
 			}
 		}
 		if err != nil {
@@ -890,7 +896,7 @@ func (dm *DataManager) GetThresholdProfile(tenant, id string, cacheRead, cacheWr
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	th, err = dm.dataDB.GetThresholdProfileDrv(tenant, id)
+	th, err = dm.DataDB().GetThresholdProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaThresholdProfiles]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -901,7 +907,7 @@ func (dm *DataManager) GetThresholdProfile(tenant, id string, cacheRead, cacheWr
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &th); err == nil {
-				err = dm.dataDB.SetThresholdProfileDrv(th)
+				err = dm.DataDB().SetThresholdProfileDrv(th)
 			}
 		}
 		if err != nil {
@@ -1036,7 +1042,7 @@ func (dm *DataManager) GetStatQueue(tenant, id string,
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	sq, err = dm.dataDB.GetStatQueueDrv(tenant, id)
+	sq, err = dm.DataDB().GetStatQueueDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaStatQueues]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns, utils.ReplicatorSv1GetStatQueue,
@@ -1047,13 +1053,13 @@ func (dm *DataManager) GetStatQueue(tenant, id string,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &sq); err == nil {
 				var ssq *StoredStatQueue
-				if dm.dataDB.GetStorageType() != utils.Internal {
+				if dm.DataDB().GetStorageType() != utils.Internal {
 					// in case of internal we don't marshal
 					if ssq, err = NewStoredStatQueue(sq, dm.ms); err != nil {
 						return nil, err
 					}
 				}
-				err = dm.dataDB.SetStatQueueDrv(ssq, sq)
+				err = dm.DataDB().SetStatQueueDrv(ssq, sq)
 			}
 		}
 		if err != nil {
@@ -1082,13 +1088,13 @@ func (dm *DataManager) SetStatQueue(sq *StatQueue) (err error) {
 		return utils.ErrNoDatabaseConn
 	}
 	var ssq *StoredStatQueue
-	if dm.dataDB.GetStorageType() != utils.Internal {
+	if dm.DataDB().GetStorageType() != utils.Internal {
 		// in case of internal we don't marshal
 		if ssq, err = NewStoredStatQueue(sq, dm.ms); err != nil {
 			return
 		}
 	}
-	if err = dm.dataDB.SetStatQueueDrv(ssq, sq); err != nil {
+	if err = dm.DataDB().SetStatQueueDrv(ssq, sq); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaStatQueues]
@@ -1107,7 +1113,7 @@ func (dm *DataManager) RemoveStatQueue(tenant, id string) (err error) {
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.RemStatQueueDrv(tenant, id); err != nil {
+	if err = dm.DataDB().RemStatQueueDrv(tenant, id); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaStatQueues]
@@ -1137,7 +1143,7 @@ func (dm *DataManager) GetStatQueueProfile(tenant, id string, cacheRead, cacheWr
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	sqp, err = dm.dataDB.GetStatQueueProfileDrv(tenant, id)
+	sqp, err = dm.DataDB().GetStatQueueProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaStatQueueProfiles]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -1148,7 +1154,7 @@ func (dm *DataManager) GetStatQueueProfile(tenant, id string, cacheRead, cacheWr
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &sqp); err == nil {
-				err = dm.dataDB.SetStatQueueProfileDrv(sqp)
+				err = dm.DataDB().SetStatQueueProfileDrv(sqp)
 			}
 		}
 		if err != nil {
@@ -1316,7 +1322,7 @@ func (dm *DataManager) GetTrend(tenant, id string,
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	if tr, err = dm.dataDB.GetTrendDrv(tenant, id); err != nil {
+	if tr, err = dm.DataDB().GetTrendDrv(tenant, id); err != nil {
 		if err != utils.ErrNotFound { // database error
 			return
 		}
@@ -1333,7 +1339,7 @@ func (dm *DataManager) GetTrend(tenant, id string,
 				if err != utils.ErrNotFound { // RPC error
 					return
 				}
-			} else if err = dm.dataDB.SetTrendDrv(tr); err != nil {
+			} else if err = dm.DataDB().SetTrendDrv(tr); err != nil {
 				return
 			}
 		}
@@ -1366,7 +1372,7 @@ func (dm *DataManager) SetTrend(tr *Trend) (err error) {
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if dm.dataDB.GetStorageType() != utils.MetaInternal {
+	if dm.DataDB().GetStorageType() != utils.MetaInternal {
 		if tr, err = tr.compress(dm.ms); err != nil {
 			return
 		}
@@ -1420,7 +1426,7 @@ func (dm *DataManager) GetTrendProfile(tenant, id string, cacheRead, cacheWrite 
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	trp, err = dm.dataDB.GetTrendProfileDrv(tenant, id)
+	trp, err = dm.DataDB().GetTrendProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaTrendProfiles]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -1431,7 +1437,7 @@ func (dm *DataManager) GetTrendProfile(tenant, id string, cacheRead, cacheWrite 
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &trp); err == nil {
-				err = dm.dataDB.SetTrendProfileDrv(trp)
+				err = dm.DataDB().SetTrendProfileDrv(trp)
 			}
 		}
 		if err != nil {
@@ -1458,7 +1464,7 @@ func (dm *DataManager) GetTrendProfileIDs(tenants []string) (tps map[string][]st
 	prfx := utils.TrendsProfilePrefix
 	var keys []string
 	if len(tenants) == 0 {
-		keys, err = dm.dataDB.GetKeysForPrefix(prfx, utils.EmptyString)
+		keys, err = dm.DataDB().GetKeysForPrefix(prfx, utils.EmptyString)
 		if err != nil {
 			return
 		}
@@ -1466,7 +1472,7 @@ func (dm *DataManager) GetTrendProfileIDs(tenants []string) (tps map[string][]st
 		for _, tenant := range tenants {
 			var tntkeys []string
 			tntPrfx := prfx + tenant + utils.ConcatenatedKeySep
-			tntkeys, err = dm.dataDB.GetKeysForPrefix(tntPrfx, utils.EmptyString)
+			tntkeys, err = dm.DataDB().GetKeysForPrefix(tntPrfx, utils.EmptyString)
 			if err != nil {
 				return
 			}
@@ -1560,7 +1566,7 @@ func (dm *DataManager) GetRankingProfile(tenant, id string, cacheRead, cacheWrit
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	rgp, err = dm.dataDB.GetRankingProfileDrv(tenant, id)
+	rgp, err = dm.DataDB().GetRankingProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaRankingProfiles]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -1571,7 +1577,7 @@ func (dm *DataManager) GetRankingProfile(tenant, id string, cacheRead, cacheWrit
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &rgp); err == nil {
-				err = dm.dataDB.SetRankingProfileDrv(rgp)
+				err = dm.DataDB().SetRankingProfileDrv(rgp)
 			}
 		}
 		if err != nil {
@@ -1598,7 +1604,7 @@ func (dm *DataManager) GetRankingProfileIDs(tenants []string) (rns map[string][]
 	prfx := utils.RankingsProfilePrefix
 	var keys []string
 	if len(tenants) == 0 {
-		keys, err = dm.dataDB.GetKeysForPrefix(prfx, utils.EmptyString)
+		keys, err = dm.DataDB().GetKeysForPrefix(prfx, utils.EmptyString)
 		if err != nil {
 			return
 		}
@@ -1606,7 +1612,7 @@ func (dm *DataManager) GetRankingProfileIDs(tenants []string) (rns map[string][]
 		for _, tenant := range tenants {
 			var tntkeys []string
 			tntPrfx := prfx + tenant + utils.ConcatenatedKeySep
-			tntkeys, err = dm.dataDB.GetKeysForPrefix(tntPrfx, utils.EmptyString)
+			tntkeys, err = dm.DataDB().GetKeysForPrefix(tntPrfx, utils.EmptyString)
 			if err != nil {
 				return
 			}
@@ -1696,7 +1702,7 @@ func (dm *DataManager) GetRanking(tenant, id string, cacheRead, cacheWrite bool,
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	if rn, err = dm.dataDB.GetRankingDrv(tenant, id); err != nil {
+	if rn, err = dm.DataDB().GetRankingDrv(tenant, id); err != nil {
 		if err != utils.ErrNotFound { // database error
 			return
 		}
@@ -1709,7 +1715,7 @@ func (dm *DataManager) GetRanking(tenant, id string, cacheRead, cacheWrite bool,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &rn); err == nil {
-				err = dm.dataDB.SetRankingDrv(rn)
+				err = dm.DataDB().SetRankingDrv(rn)
 			}
 		}
 		if err != nil {
@@ -1783,7 +1789,7 @@ func (dm *DataManager) GetTiming(id string, skipCache bool,
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	t, err = dm.dataDB.GetTimingDrv(id)
+	t, err = dm.DataDB().GetTimingDrv(id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaTimings]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns, utils.ReplicatorSv1GetTiming,
@@ -1794,7 +1800,7 @@ func (dm *DataManager) GetTiming(id string, skipCache bool,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &t); err == nil {
-				err = dm.dataDB.SetTimingDrv(t)
+				err = dm.DataDB().SetTimingDrv(t)
 			}
 		}
 		if err != nil {
@@ -1879,7 +1885,7 @@ func (dm *DataManager) GetResource(tenant, id string, cacheRead, cacheWrite bool
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	rs, err = dm.dataDB.GetResourceDrv(tenant, id)
+	rs, err = dm.DataDB().GetResourceDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaResources]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -1890,7 +1896,7 @@ func (dm *DataManager) GetResource(tenant, id string, cacheRead, cacheWrite bool
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &rs); err == nil {
-				err = dm.dataDB.SetResourceDrv(rs)
+				err = dm.DataDB().SetResourceDrv(rs)
 			}
 		}
 		if err != nil {
@@ -1966,7 +1972,7 @@ func (dm *DataManager) GetResourceProfile(tenant, id string, cacheRead, cacheWri
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	rp, err = dm.dataDB.GetResourceProfileDrv(tenant, id)
+	rp, err = dm.DataDB().GetResourceProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaResourceProfile]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -1976,7 +1982,7 @@ func (dm *DataManager) GetResourceProfile(tenant, id string, cacheRead, cacheWri
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &rp); err == nil {
-				err = dm.dataDB.SetResourceProfileDrv(rp)
+				err = dm.DataDB().SetResourceProfileDrv(rp)
 			}
 		}
 		if err != nil {
@@ -2114,7 +2120,7 @@ func (dm *DataManager) GetIPAllocations(tenant, id string, cacheRead, cacheWrite
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	ip, err = dm.dataDB.GetIPAllocationsDrv(tenant, id)
+	ip, err = dm.DataDB().GetIPAllocationsDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaIPAllocations]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -2125,7 +2131,7 @@ func (dm *DataManager) GetIPAllocations(tenant, id string, cacheRead, cacheWrite
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &ip); err == nil {
-				err = dm.dataDB.SetIPAllocationsDrv(ip)
+				err = dm.DataDB().SetIPAllocationsDrv(ip)
 			}
 		}
 		if err != nil {
@@ -2155,7 +2161,7 @@ func (dm *DataManager) SetIPAllocations(ip *IPAllocations) (err error) {
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.SetIPAllocationsDrv(ip); err != nil {
+	if err = dm.DataDB().SetIPAllocationsDrv(ip); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaIPAllocations]
@@ -2172,7 +2178,7 @@ func (dm *DataManager) RemoveIPAllocations(tenant, id string) (err error) {
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.RemoveIPAllocationsDrv(tenant, id); err != nil {
+	if err = dm.DataDB().RemoveIPAllocationsDrv(tenant, id); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaIPAllocations]
@@ -2201,7 +2207,7 @@ func (dm *DataManager) GetIPProfile(tenant, id string, cacheRead, cacheWrite boo
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	ipp, err = dm.dataDB.GetIPProfileDrv(tenant, id)
+	ipp, err = dm.DataDB().GetIPProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaIPProfiles]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -2211,7 +2217,7 @@ func (dm *DataManager) GetIPProfile(tenant, id string, cacheRead, cacheWrite boo
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &ipp); err == nil {
-				err = dm.dataDB.SetIPProfileDrv(ipp)
+				err = dm.DataDB().SetIPProfileDrv(ipp)
 			}
 		}
 		if err != nil {
@@ -2250,7 +2256,7 @@ func (dm *DataManager) SetIPProfile(ipp *IPProfile, withIndex bool) (err error) 
 	if err != nil && err != utils.ErrNotFound {
 		return err
 	}
-	if err = dm.dataDB.SetIPProfileDrv(ipp); err != nil {
+	if err = dm.DataDB().SetIPProfileDrv(ipp); err != nil {
 		return err
 	}
 	if withIndex {
@@ -2302,7 +2308,7 @@ func (dm *DataManager) RemoveIPProfile(tenant, id string, withIndex bool) (err e
 	if err != nil && err != utils.ErrNotFound {
 		return err
 	}
-	if err = dm.dataDB.RemoveIPProfileDrv(tenant, id); err != nil {
+	if err = dm.DataDB().RemoveIPProfileDrv(tenant, id); err != nil {
 		return
 	}
 	if oldIPP == nil {
@@ -2343,7 +2349,7 @@ func (dm *DataManager) GetActionTriggers(id string, skipCache bool,
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	attrs, err = dm.dataDB.GetActionTriggersDrv(id)
+	attrs, err = dm.DataDB().GetActionTriggersDrv(id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaActionTriggers]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns, utils.ReplicatorSv1GetActionTriggers,
@@ -2354,7 +2360,7 @@ func (dm *DataManager) GetActionTriggers(id string, skipCache bool,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &attrs); err == nil {
-				err = dm.dataDB.SetActionTriggersDrv(id, attrs)
+				err = dm.DataDB().SetActionTriggersDrv(id, attrs)
 			}
 		}
 		if err != nil {
@@ -2455,7 +2461,7 @@ func (dm *DataManager) GetSharedGroup(key string, skipCache bool,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &sg); err == nil {
-				err = dm.dataDB.SetSharedGroupDrv(sg)
+				err = dm.DataDB().SetSharedGroupDrv(sg)
 			}
 		}
 		if err != nil {
@@ -2548,7 +2554,7 @@ func (dm *DataManager) GetActions(key string, skipCache bool, transactionID stri
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &as); err == nil {
-				err = dm.dataDB.SetActionsDrv(key, as)
+				err = dm.DataDB().SetActionsDrv(key, as)
 			}
 		}
 		if err != nil {
@@ -2632,7 +2638,7 @@ func (dm *DataManager) GetActionPlan(key string, cacheRead, cacheWrite bool, tra
 		return
 	}
 
-	ats, err = dm.dataDB.GetActionPlanDrv(key)
+	ats, err = dm.DataDB().GetActionPlanDrv(key)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaActionPlans]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -2643,7 +2649,7 @@ func (dm *DataManager) GetActionPlan(key string, cacheRead, cacheWrite bool, tra
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &ats); err == nil {
-				err = dm.dataDB.SetActionPlanDrv(key, ats)
+				err = dm.DataDB().SetActionPlanDrv(key, ats)
 			}
 		}
 		if err != nil {
@@ -2693,7 +2699,7 @@ func (dm *DataManager) SetActionPlan(key string, ats *ActionPlan,
 		}
 	}
 
-	if err = dm.dataDB.SetActionPlanDrv(key, ats); err != nil {
+	if err = dm.DataDB().SetActionPlanDrv(key, ats); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaActionPlans]
@@ -2714,7 +2720,7 @@ func (dm *DataManager) GetAllActionPlans() (ats map[string]*ActionPlan, err erro
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	ats, err = dm.dataDB.GetAllActionPlansDrv()
+	ats, err = dm.DataDB().GetAllActionPlansDrv()
 	if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaActionPlans]; ((err == nil && len(ats) == 0) || err == utils.ErrNotFound) && itm.Remote {
 		err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
 			utils.ReplicatorSv1GetAllActionPlans,
@@ -2737,7 +2743,7 @@ func (dm *DataManager) RemoveActionPlan(key string, transactionID string) (err e
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.RemoveActionPlanDrv(key); err != nil {
+	if err = dm.DataDB().RemoveActionPlanDrv(key); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaActionPlans]
@@ -2765,7 +2771,7 @@ func (dm *DataManager) GetAccountActionPlans(acntID string, cacheRead, cacheWrit
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	apIDs, err = dm.dataDB.GetAccountActionPlansDrv(acntID)
+	apIDs, err = dm.DataDB().GetAccountActionPlansDrv(acntID)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaAccountActionPlans]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -2777,7 +2783,7 @@ func (dm *DataManager) GetAccountActionPlans(acntID string, cacheRead, cacheWrit
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &apIDs); err == nil {
-				err = dm.dataDB.SetAccountActionPlansDrv(acntID, apIDs)
+				err = dm.DataDB().SetAccountActionPlansDrv(acntID, apIDs)
 			}
 		}
 		if err != nil {
@@ -2823,7 +2829,7 @@ func (dm *DataManager) SetAccountActionPlans(acntID string, aPlIDs []string, ove
 		}
 	}
 
-	if err = dm.dataDB.SetAccountActionPlansDrv(acntID, aPlIDs); err != nil {
+	if err = dm.DataDB().SetAccountActionPlansDrv(acntID, aPlIDs); err != nil {
 		return
 	}
 	itm := config.CgrConfig().DataDbCfg().Items[utils.MetaAccountActionPlans]
@@ -2866,7 +2872,7 @@ func (dm *DataManager) RemAccountActionPlans(acntID string, apIDs []string) (err
 			return dm.SetAccountActionPlans(acntID, remainAAP, true)
 		}
 	}
-	if err = dm.dataDB.RemAccountActionPlansDrv(acntID); err != nil {
+	if err = dm.DataDB().RemAccountActionPlansDrv(acntID); err != nil {
 		return
 	}
 	if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaAccountActionPlans]; itm.Replicate {
@@ -2910,7 +2916,7 @@ func (dm *DataManager) GetRatingPlan(key string, skipCache bool,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &rp); err == nil {
-				err = dm.dataDB.SetRatingPlanDrv(rp)
+				err = dm.DataDB().SetRatingPlanDrv(rp)
 			}
 		}
 		if err != nil {
@@ -2999,7 +3005,7 @@ func (dm *DataManager) GetRatingProfile(key string, skipCache bool,
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &rpf); err == nil {
-				err = dm.dataDB.SetRatingProfileDrv(rpf)
+				err = dm.DataDB().SetRatingProfileDrv(rpf)
 			}
 		}
 		if err != nil {
@@ -3082,7 +3088,7 @@ func (dm *DataManager) GetRouteProfile(tenant, id string, cacheRead, cacheWrite 
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	rpp, err = dm.dataDB.GetRouteProfileDrv(tenant, id)
+	rpp, err = dm.DataDB().GetRouteProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaRouteProfiles]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns, utils.ReplicatorSv1GetRouteProfile,
@@ -3092,7 +3098,7 @@ func (dm *DataManager) GetRouteProfile(tenant, id string, cacheRead, cacheWrite 
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &rpp); err == nil {
-				err = dm.dataDB.SetRouteProfileDrv(rpp)
+				err = dm.DataDB().SetRouteProfileDrv(rpp)
 			}
 		}
 		if err != nil {
@@ -3213,7 +3219,7 @@ func (dm *DataManager) GetAttributeProfile(tenant, id string, cacheRead, cacheWr
 		err = utils.ErrNoDatabaseConn
 		return
 	} else {
-		if attrPrfl, err = dm.dataDB.GetAttributeProfileDrv(tenant, id); err != nil {
+		if attrPrfl, err = dm.DataDB().GetAttributeProfileDrv(tenant, id); err != nil {
 			if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaAttributeProfiles]; err == utils.ErrNotFound && itm.Remote {
 				if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
 					utils.ReplicatorSv1GetAttributeProfile,
@@ -3223,7 +3229,7 @@ func (dm *DataManager) GetAttributeProfile(tenant, id string, cacheRead, cacheWr
 							utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 								config.CgrConfig().GeneralCfg().NodeID)),
 					}, &attrPrfl); err == nil {
-					err = dm.dataDB.SetAttributeProfileDrv(attrPrfl)
+					err = dm.DataDB().SetAttributeProfileDrv(attrPrfl)
 				}
 			}
 			if err != nil {
@@ -3347,7 +3353,7 @@ func (dm *DataManager) GetChargerProfile(tenant, id string, cacheRead, cacheWrit
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	cpp, err = dm.dataDB.GetChargerProfileDrv(tenant, id)
+	cpp, err = dm.DataDB().GetChargerProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaChargerProfiles]; err == utils.ErrNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -3358,7 +3364,7 @@ func (dm *DataManager) GetChargerProfile(tenant, id string, cacheRead, cacheWrit
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &cpp); err == nil {
-				err = dm.dataDB.SetChargerProfileDrv(cpp)
+				err = dm.DataDB().SetChargerProfileDrv(cpp)
 			}
 		}
 		if err != nil {
@@ -3471,7 +3477,7 @@ func (dm *DataManager) GetDispatcherProfile(tenant, id string, cacheRead, cacheW
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	dpp, err = dm.dataDB.GetDispatcherProfileDrv(tenant, id)
+	dpp, err = dm.DataDB().GetDispatcherProfileDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaDispatcherProfiles]; err == utils.ErrDSPProfileNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -3482,7 +3488,7 @@ func (dm *DataManager) GetDispatcherProfile(tenant, id string, cacheRead, cacheW
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &dpp); err == nil {
-				err = dm.dataDB.SetDispatcherProfileDrv(dpp)
+				err = dm.DataDB().SetDispatcherProfileDrv(dpp)
 			}
 		}
 		if err != nil {
@@ -3601,7 +3607,7 @@ func (dm *DataManager) GetDispatcherHost(tenant, id string, cacheRead, cacheWrit
 		err = utils.ErrNoDatabaseConn
 		return
 	}
-	dH, err = dm.dataDB.GetDispatcherHostDrv(tenant, id)
+	dH, err = dm.DataDB().GetDispatcherHostDrv(tenant, id)
 	if err != nil {
 		if itm := config.CgrConfig().DataDbCfg().Items[utils.MetaDispatcherHosts]; err == utils.ErrDSPHostNotFound && itm.Remote {
 			if err = dm.connMgr.Call(context.TODO(), config.CgrConfig().DataDbCfg().RmtConns,
@@ -3612,7 +3618,7 @@ func (dm *DataManager) GetDispatcherHost(tenant, id string, cacheRead, cacheWrit
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &dH); err == nil {
-				err = dm.dataDB.SetDispatcherHostDrv(dH)
+				err = dm.DataDB().SetDispatcherHostDrv(dH)
 			}
 		}
 		if err != nil {
@@ -3697,7 +3703,7 @@ func (dm *DataManager) GetItemLoadIDs(itemIDPrefix string, cacheWrite bool) (loa
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &loadIDs); err == nil {
-				err = dm.dataDB.SetLoadIDsDrv(loadIDs)
+				err = dm.DataDB().SetLoadIDsDrv(loadIDs)
 			}
 		}
 		if err != nil {
@@ -3758,9 +3764,15 @@ func (dm *DataManager) Reconnect(marshaller string, newcfg *config.DataDbCfg, it
 	if err != nil {
 		return
 	}
-	// ToDo: consider locking
-	dm.dataDB.Close()
+
+	dm.dbMux.Lock()
+	oldDB := dm.dataDB
 	dm.dataDB = d
+	dm.dbMux.Unlock()
+
+	if oldDB != nil {
+		oldDB.Close()
+	}
 	return
 }
 
@@ -3811,7 +3823,7 @@ func (dm *DataManager) GetIndexes(idxItmType, tntCtx string, cacheRead, cacheWri
 						utils.FirstNonEmpty(config.CgrConfig().DataDbCfg().RmtConnID,
 							config.CgrConfig().GeneralCfg().NodeID)),
 				}, &indexes); err == nil {
-				err = dm.dataDB.SetIndexesDrv(idxItmType, tntCtx, indexes, true, utils.NonTransactional)
+				err = dm.DataDB().SetIndexesDrv(idxItmType, tntCtx, indexes, true, utils.NonTransactional)
 			}
 		}
 		if err != nil {
@@ -3969,7 +3981,7 @@ func (dm *DataManager) GetSessionsBackup(nodeID, tenant string) ([]*StoredSessio
 	if dm == nil {
 		return nil, utils.ErrNoDatabaseConn
 	}
-	return dm.dataDB.GetSessionsBackupDrv(nodeID, tenant)
+	return dm.DataDB().GetSessionsBackupDrv(nodeID, tenant)
 }
 
 type SetBackupSessionsArgs struct {
@@ -3984,7 +3996,7 @@ func (dm *DataManager) SetBackupSessions(nodeID, tenant string,
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.SetBackupSessionsDrv(nodeID, tenant, storedSessions); err != nil {
+	if err = dm.DataDB().SetBackupSessionsDrv(nodeID, tenant, storedSessions); err != nil {
 		return
 	}
 
@@ -4010,7 +4022,7 @@ func (dm *DataManager) RemoveSessionsBackup(nodeID, tenant, cgrid string) (err e
 	if dm == nil {
 		return utils.ErrNoDatabaseConn
 	}
-	if err = dm.dataDB.RemoveSessionsBackupDrv(nodeID, tenant, cgrid); err != nil {
+	if err = dm.DataDB().RemoveSessionsBackupDrv(nodeID, tenant, cgrid); err != nil {
 		return
 	}
 
