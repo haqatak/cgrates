@@ -618,13 +618,8 @@ func (s *IPService) matchingIPAllocationsForEvent(tnt string,
 		itemIDs = []string{x.(string)}
 		defer func() { // make sure we uncache if we find errors
 			if err != nil {
-				// TODO: Consider using RemoveWithoutReplicate instead, as
-				// partitions with Replicate=true call ReplicateRemove in
-				// onEvict by default.
-				if errCh := Cache.Remove(utils.CacheEventIPs, evUUID,
-					true, utils.NonTransactional); errCh != nil {
-					err = errCh
-				}
+				Cache.RemoveWithoutReplicate(utils.CacheEventIPs, evUUID,
+					true, utils.NonTransactional)
 			}
 		}()
 	} else { // select the IP allocation IDs out of dataDB
