@@ -130,7 +130,10 @@ func (sg *SharedGroup) SortBalancesByStrategy(myBalance *Balance, bc Balances) B
 // Returns all shared group's balances collected from user accounts'
 func (sg *SharedGroup) GetBalances(destination, category, balanceType string, ub *Account, aTime time.Time) (bc Balances) {
 	//	if len(sg.members) == 0 {
-	for ubId := range sg.MemberIds {
+	for ubId, active := range sg.MemberIds {
+		if !active {
+			continue
+		}
 		var nUb *Account
 		if ubId == ub.ID { // skip the initiating user
 			nUb = ub
