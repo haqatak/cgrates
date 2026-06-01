@@ -24,6 +24,7 @@ import (
 	"github.com/cgrates/cgrates/config"
 	"github.com/cgrates/cgrates/sessions"
 	"github.com/cgrates/cgrates/utils"
+	"github.com/cgrates/cgrates/engine"
 )
 
 func TestKAsSessionSClientIface(t *testing.T) {
@@ -83,5 +84,53 @@ func TestKamailioAgentReload(t *testing.T) {
 		if conn != nil {
 			t.Errorf("Expected ka.conns[%d] to be nil, but got  value", i)
 		}
+	}
+}
+func TestNewKamailioAgent(t *testing.T) {
+	kaCfg := &config.KamAgentCfg{
+		EvapiConns: []*config.KamConnCfg{
+			{},
+			{},
+		},
+	}
+	connMgr := &engine.ConnManager{}
+	caps := &engine.Caps{}
+	timezone := "UTC"
+
+	ka, err := NewKamailioAgent(kaCfg, connMgr, timezone, caps)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if ka == nil {
+		t.Fatalf("Expected non-nil KamailioAgent")
+	}
+
+	if ka.cfg != kaCfg {
+		t.Errorf("Expected cfg to be %v, got %v", kaCfg, ka.cfg)
+	}
+
+	if ka.connMgr != connMgr {
+		t.Errorf("Expected connMgr to be %v, got %v", connMgr, ka.connMgr)
+	}
+
+	if ka.timezone != timezone {
+		t.Errorf("Expected timezone to be %v, got %v", timezone, ka.timezone)
+	}
+
+	if ka.caps != caps {
+		t.Errorf("Expected caps to be %v, got %v", caps, ka.caps)
+	}
+
+	if len(ka.conns) != len(kaCfg.EvapiConns) {
+		t.Errorf("Expected conns length %d, got %d", len(kaCfg.EvapiConns), len(ka.conns))
+	}
+
+	if ka.activeSessionIDs == nil {
+		t.Errorf("Expected activeSessionIDs to be initialized")
+	}
+
+	if ka.ctx == nil {
+		t.Errorf("Expected ctx to be initialized")
 	}
 }
