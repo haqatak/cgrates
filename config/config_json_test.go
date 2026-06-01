@@ -1100,7 +1100,6 @@ func TestDiameterAgentJsonCfg(t *testing.T) {
 		ASRTemplate:             utils.StringPointer(""),
 		RARTemplate:             utils.StringPointer(""),
 		ForcedDisconnect:        utils.StringPointer(utils.MetaNone),
-		ConnHealthCheckInterval: utils.StringPointer("0"),
 		RequestProcessors:       &[]*ReqProcessorJsnCfg{},
 	}
 	dfCgrJSONCfg, err := NewCgrJsonCfgFromBytes([]byte(CGRATES_CFG_JSON))

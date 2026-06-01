@@ -564,10 +564,6 @@ func (da *DiameterAgent) handleConns(peers <-chan diam.Conn) {
 		connStatus := utils.ConnStatusUp
 		da.sendConnStatusReport(meta, connStatus, localAddr, remoteAddr)
 		go func() {
-			// Use hybrid approach to detect connection closure. CloseNotify() may not
-			// fire if the serve() goroutine is blocked in Read(), so we also perform
-			// periodic write checks as a fallback.
-			// TODO: Remove fallback once go-diameter fixes CloseNotify race condition.
 			defer func() {
 				da.peersLck.Lock()
 				delete(da.peers, remoteAddr)
@@ -575,29 +571,7 @@ func (da *DiameterAgent) handleConns(peers <-chan diam.Conn) {
 				da.sendConnStatusReport(meta, utils.ConnStatusDown, localAddr, remoteAddr)
 			}()
 
-			closeChan := c.(diam.CloseNotifier).CloseNotify()
-
-			// Setup optional health check ticker. If interval is 0, tickChan remains nil
-			// and that select case blocks forever, effectively disabling periodic checks.
-			var tickChan <-chan time.Time
-			interval := da.cgrCfg.DiameterAgentCfg().ConnHealthCheckInterval
-			if interval > 0 {
-				ticker := time.NewTicker(interval)
-				defer ticker.Stop()
-				tickChan = ticker.C
-			}
-
-			for {
-				select {
-				case <-closeChan:
-					return
-				case <-tickChan:
-					// Periodic health check: write 0 bytes to detect broken connections.
-					if _, err := c.Connection().Write([]byte{}); err != nil {
-						return
-					}
-				}
-			}
+			<-c.(diam.CloseNotifier).CloseNotify()
 		}()
 	}
 }

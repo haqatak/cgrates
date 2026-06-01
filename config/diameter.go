@@ -20,7 +20,6 @@ package config
 
 import (
 	"slices"
-	"time"
 
 	"github.com/cgrates/cgrates/utils"
 	"github.com/cgrates/rpcclient"
@@ -50,7 +49,6 @@ type DiameterAgentCfg struct {
 	ForcedDisconnect        string
 	ConnStatusStatQueueIDs  []string
 	ConnStatusThresholdIDs  []string
-	ConnHealthCheckInterval time.Duration // peer connection health check interval (0 to disable)
 	RequestProcessors       []*RequestProcessor
 }
 
@@ -128,12 +126,6 @@ func (da *DiameterAgentCfg) loadFromJSONCfg(jc *DiameterAgentJsonCfg, separator 
 	if jc.ThresholdIDs != nil {
 		da.ConnStatusThresholdIDs = *jc.ThresholdIDs
 	}
-	if jc.ConnHealthCheckInterval != nil {
-		da.ConnHealthCheckInterval, err = utils.ParseDurationWithNanosecs(*jc.ConnHealthCheckInterval)
-		if err != nil {
-			return
-		}
-	}
 	if jc.RequestProcessors != nil {
 		for _, reqProcJsn := range *jc.RequestProcessors {
 			rp := new(RequestProcessor)
@@ -183,7 +175,6 @@ func (da *DiameterAgentCfg) AsMapInterface(separator string) map[string]any {
 		utils.ASRTemplateCfg:             da.ASRTemplate,
 		utils.RARTemplateCfg:             da.RARTemplate,
 		utils.ForcedDisconnectCfg:        da.ForcedDisconnect,
-		utils.ConnHealthCheckIntervalCfg: da.ConnHealthCheckInterval.String(),
 		utils.StatSConnsCfg:              stripInternalConns(da.StatSConns),
 		utils.ThresholdSConnsCfg:         stripInternalConns(da.ThresholdSConns),
 		utils.ConnStatusStatQueueIDsCfg:  da.ConnStatusStatQueueIDs,
@@ -240,7 +231,6 @@ func (da *DiameterAgentCfg) Clone() *DiameterAgentCfg {
 		ForcedDisconnect:        da.ForcedDisconnect,
 		ConnStatusStatQueueIDs:  slices.Clone(da.ConnStatusStatQueueIDs),
 		ConnStatusThresholdIDs:  slices.Clone(da.ConnStatusThresholdIDs),
-		ConnHealthCheckInterval: da.ConnHealthCheckInterval,
 	}
 	if da.RequestProcessors != nil {
 		clone.RequestProcessors = make([]*RequestProcessor, len(da.RequestProcessors))
