@@ -205,3 +205,40 @@ func TestKamConnCfgClone(t *testing.T) {
 		})
 	}
 }
+
+func TestNewDfltKamConnConfig(t *testing.T) {
+	// capture original
+	orig := dfltKamConnConfig
+	defer func() {
+		dfltKamConnConfig = orig
+	}()
+
+	dfltKamConnConfig = nil
+
+	// Test case 1: dfltKamConnConfig is nil
+	got1 := NewDfltKamConnConfig()
+	if got1 == nil {
+		t.Errorf("NewDfltKamConnConfig() returned nil")
+	}
+	expected1 := new(KamConnCfg)
+	if !reflect.DeepEqual(got1, expected1) {
+		t.Errorf("NewDfltKamConnConfig() expected %v, got %v", expected1, got1)
+	}
+
+	// Test case 2: dfltKamConnConfig is not nil
+	testCfg := &KamConnCfg{
+		Alias:   "test",
+		Address: "127.0.0.1:1234",
+	}
+	dfltKamConnConfig = testCfg
+	got2 := NewDfltKamConnConfig()
+
+	// Check it's a copy
+	if got2 == testCfg {
+		t.Errorf("NewDfltKamConnConfig() returned the exact same pointer")
+	}
+
+	if !reflect.DeepEqual(got2, testCfg) {
+		t.Errorf("NewDfltKamConnConfig() expected %v, got %v", testCfg, got2)
+	}
+}

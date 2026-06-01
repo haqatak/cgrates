@@ -1161,3 +1161,35 @@ func TestNewDfltFsConnConfig(t *testing.T) {
 		t.Error("Expected a copy, but got the same pointer")
 	}
 }
+
+func TestNewDefaultAsteriskConnCfg(t *testing.T) {
+	// Save the original value and defer restoration
+	orig := dfltAstConnCfg
+	defer func() {
+		dfltAstConnCfg = orig
+	}()
+
+	// Case 1: dfltAstConnCfg is nil
+	dfltAstConnCfg = nil
+	resNil := NewDefaultAsteriskConnCfg()
+	if resNil == nil {
+		t.Error("Expected non-nil result when dfltAstConnCfg is nil")
+	} else if *resNil != (AsteriskConnCfg{}) {
+		t.Errorf("Expected empty AsteriskConnCfg, got: %+v", *resNil)
+	}
+
+	// Case 2: dfltAstConnCfg is not nil
+	dummy := &AsteriskConnCfg{
+		Address: "127.0.0.1:8088",
+		Alias:   "test_alias",
+	}
+	dfltAstConnCfg = dummy
+	resNotNil := NewDefaultAsteriskConnCfg()
+	if resNotNil == nil {
+		t.Error("Expected non-nil result when dfltAstConnCfg is not nil")
+	} else if *resNotNil != *dummy {
+		t.Errorf("Expected %v, got: %v", *dummy, *resNotNil)
+	} else if resNotNil == dummy {
+		t.Error("Expected a copy, but got the same pointer")
+	}
+}
