@@ -21,8 +21,8 @@ package dispatchers
 import (
 	"encoding/gob"
 	"fmt"
-	"math/rand"
 	"sort"
+
 	"sync"
 	"time"
 
@@ -142,9 +142,10 @@ func (noSort) Sort(fltrs *engine.FilterS, ev utils.DataProvider, tnt string, hos
 type randomSort struct{}
 
 func (randomSort) Sort(fltrs *engine.FilterS, ev utils.DataProvider, tnt string, hosts engine.DispatcherHostProfiles) (hostIDs engine.DispatcherHostIDs, err error) {
-	rand.Shuffle(len(hosts), func(i, j int) {
+	for i := len(hosts) - 1; i > 0; i-- {
+		j := int(utils.RandomInteger(0, int64(i+1)))
 		hosts[i], hosts[j] = hosts[j], hosts[i]
-	})
+	}
 	return getDispatcherHosts(fltrs, ev, tnt, hosts)
 }
 

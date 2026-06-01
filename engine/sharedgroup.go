@@ -19,7 +19,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>
 package engine
 
 import (
-	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -190,7 +189,15 @@ func (rbcs *RandomBalancesSorter) Sort() {
 	src := *rbcs
 	// randomize balance chain
 	dest := make([]*Balance, len(src))
-	perm := rand.Perm(len(src))
+	// generate permutation
+	perm := make([]int, len(src))
+	for i := range perm {
+		perm[i] = i
+	}
+	for i := len(perm) - 1; i > 0; i-- {
+		j := int(utils.RandomInteger(0, int64(i+1)))
+		perm[i], perm[j] = perm[j], perm[i]
+	}
 	for i, v := range perm {
 		dest[v] = src[i]
 	}
