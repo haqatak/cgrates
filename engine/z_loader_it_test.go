@@ -636,7 +636,7 @@ func testLoaderITLoadIndividualProfiles(t *testing.T) {
 	} else {
 
 		for _, a := range aas {
-			if err := loader.LoadAccountActionsFiltered(a); err != nil {
+			if _, err := loader.LoadAccountActionsFiltered(a); err != nil {
 				t.Fatalf("Could not load account actions with id: %s, error: %s", a.GetId(), err.Error())
 			}
 		}

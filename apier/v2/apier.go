@@ -91,10 +91,22 @@ func (apiv2 *APIerSv2) LoadAccountActions(ctx *context.Context, attrs *AttrLoadA
 	}
 	tpAa := &utils.TPAccountActions{TPid: attrs.TPid}
 	tpAa.SetAccountActionsId(attrs.AccountActionsId)
+	var actionIDs []string
 	if err := guardian.Guardian.Guard(func() error {
-		return dbReader.LoadAccountActionsFiltered(tpAa)
+		var err error
+		actionIDs, err = dbReader.LoadAccountActionsFiltered(tpAa)
+		return err
 	}, config.CgrConfig().GeneralCfg().LockingTimeout, attrs.AccountActionsId); err != nil {
 		return utils.NewErrServerError(err)
+	}
+	if len(actionIDs) > 0 {
+		var reply string
+		if err := apiv2.ConnMgr.Call(ctx, apiv2.Config.ApierCfg().CachesConns,
+			utils.CacheSv1ReloadCache, &utils.AttrReloadCacheWithAPIOpts{
+				ActionIDs: actionIDs,
+			}, &reply); err != nil {
+			return utils.NewErrServerError(err)
+		}
 	}
 	sched := apiv2.SchedulerService.GetScheduler()
 	if sched != nil {

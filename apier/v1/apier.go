@@ -969,12 +969,23 @@ func (apierSv1 *APIerSv1) LoadAccountActions(ctx *context.Context, attrs *utils.
 	if err != nil {
 		return utils.NewErrServerError(err)
 	}
+	var actionIDs []string
 	if err := guardian.Guardian.Guard(func() error {
-		return dbReader.LoadAccountActionsFiltered(attrs)
+		var err error
+		actionIDs, err = dbReader.LoadAccountActionsFiltered(attrs)
+		return err
 	}, config.CgrConfig().GeneralCfg().LockingTimeout, attrs.LoadId); err != nil {
 		return utils.NewErrServerError(err)
 	}
-	// ToDo: Get the action keys loaded by dbReader so we reload only these in cache
+	if len(actionIDs) > 0 {
+		var reply string
+		if err := apierSv1.ConnMgr.Call(ctx, apierSv1.Config.ApierCfg().CachesConns,
+			utils.CacheSv1ReloadCache, &utils.AttrReloadCacheWithAPIOpts{
+				ActionIDs: actionIDs,
+			}, &reply); err != nil {
+			return utils.NewErrServerError(err)
+		}
+	}
 	// Need to do it before scheduler otherwise actions to run will be unknown
 	sched := apierSv1.SchedulerService.GetScheduler()
 	if sched != nil {
