@@ -33,7 +33,7 @@ import (
 	"io"
 	"math"
 	"math/big"
-	math_rand "math/rand"
+
 	"os"
 	"path/filepath"
 	"regexp"
@@ -918,8 +918,7 @@ func RandomInteger(min, max int64) int64 {
 	}
 	n, err := rand.Int(rand.Reader, big.NewInt(max-min))
 	if err != nil {
-		// Fallback to weak PRNG if crypto/rand fails
-		return math_rand.Int63n(max-min) + min
+		panic(fmt.Errorf("crypto/rand failed: %w", err))
 	}
 	return n.Int64() + min
 }
@@ -1018,12 +1017,11 @@ func VerifyHash(hash string, dataKeys ...string) bool {
 
 // newBoolGen initialize an efficient boolean generator
 func newBoolGen() *boolGen {
-	return &boolGen{src: math_rand.NewSource(time.Now().UnixNano())}
+	return &boolGen{}
 }
 
 // boolGen is an efficient boolean generator
 type boolGen struct {
-	src       math_rand.Source
 	cache     int64
 	remaining int
 }
@@ -1031,7 +1029,7 @@ type boolGen struct {
 // RandomBool generate a random boolean
 func (b *boolGen) RandomBool() bool {
 	if b.remaining == 0 {
-		b.cache, b.remaining = b.src.Int63(), 63
+		b.cache, b.remaining = RandomInteger(0, math.MaxInt64), 63
 	}
 	result := b.cache&0x01 == 1
 	b.cache >>= 1
