@@ -24,7 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand"
+
 	"net"
 	"net/url"
 	"strconv"
@@ -472,13 +472,13 @@ func (rC *RandomConverter) Convert(in any) (
 	out any, err error) {
 	if rC.begin == 0 {
 		if rC.end == 0 {
-			return rand.Int(), nil
+			return int(RandomInteger(0, math.MaxInt)), nil
 		} else {
-			return rand.Intn(rC.end), nil
+			return int(RandomInteger(0, int64(rC.end))), nil
 		}
 	} else {
 		if rC.end == 0 {
-			return rand.Int() + rC.begin, nil
+			return int(RandomInteger(0, math.MaxInt)) + rC.begin, nil
 		} else {
 			return int(RandomInteger(int64(rC.begin), int64(rC.end))), nil
 		}
