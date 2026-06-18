@@ -918,8 +918,8 @@ func RandomInteger(min, max int64) int64 {
 	}
 	n, err := rand.Int(rand.Reader, big.NewInt(max-min))
 	if err != nil {
-		// Fallback to weak PRNG if crypto/rand fails
-		return math_rand.Int63n(max-min) + min
+		// Fail securely if crypto/rand fails
+		panic(err)
 	}
 	return n.Int64() + min
 }
