@@ -33,10 +33,10 @@ import (
 )
 
 type SQLImpl interface {
-	extraFieldsExistsQry(string) string
-	extraFieldsValueQry(string, string) string
-	notExtraFieldsExistsQry(string) string
-	notExtraFieldsValueQry(string, string) string
+	extraFieldsExistsQry(string) (string, []any)
+	extraFieldsValueQry(string, string) (string, []any)
+	notExtraFieldsExistsQry(string) (string, []any)
+	notExtraFieldsValueQry(string, string) (string, []any)
 }
 
 type SQLStorage struct {
@@ -1099,36 +1099,46 @@ func (sqls *SQLStorage) GetCDRs(qryFltr *utils.CDRsFilter, remove bool) ([]*CDR,
 	if len(qryFltr.ExtraFields) != 0 { // Extra fields searches, implemented as contains in extra field
 		qIds := bytes.NewBufferString("(")
 		needOr := false
+		var params []any
 		for field, value := range qryFltr.ExtraFields {
 			if needOr {
 				qIds.WriteString(" OR")
 			}
+			var qry string
+			var p []any
 			if value == utils.MetaExists {
-				qIds.WriteString(sqls.SQLImpl.extraFieldsExistsQry(field))
+				qry, p = sqls.SQLImpl.extraFieldsExistsQry(field)
 			} else {
-				qIds.WriteString(sqls.SQLImpl.extraFieldsValueQry(field, value))
+				qry, p = sqls.SQLImpl.extraFieldsValueQry(field, value)
 			}
+			qIds.WriteString(qry)
+			params = append(params, p...)
 			needOr = true
 		}
 		qIds.WriteString(" )")
-		q = q.Where(qIds.String())
+		q = q.Where(qIds.String(), params...)
 	}
 	if len(qryFltr.NotExtraFields) != 0 { // Extra fields searches, implemented as contains in extra field
 		qIds := bytes.NewBufferString("(")
 		needAnd := false
+		var params []any
 		for field, value := range qryFltr.NotExtraFields {
 			if needAnd {
 				qIds.WriteString(" AND")
 			}
+			var qry string
+			var p []any
 			if value == utils.MetaExists {
-				qIds.WriteString(sqls.SQLImpl.notExtraFieldsExistsQry(field))
+				qry, p = sqls.SQLImpl.notExtraFieldsExistsQry(field)
 			} else {
-				qIds.WriteString(sqls.SQLImpl.notExtraFieldsValueQry(field, value))
+				qry, p = sqls.SQLImpl.notExtraFieldsValueQry(field, value)
 			}
+			qIds.WriteString(qry)
+			params = append(params, p...)
 			needAnd = true
 		}
 		qIds.WriteString(" )")
-		q = q.Where(qIds.String())
+		q = q.Where(qIds.String(), params...)
 	}
 	if qryFltr.OrderIDStart != nil { // Keep backwards compatible by testing 0 value
 		q = q.Where(utils.CDRsTBL+".id >= ?", *qryFltr.OrderIDStart)

@@ -40,33 +40,49 @@ func TestNotExtraFieldsValueQry(t *testing.T) {
 	msqlStorage := &MySQLStorage{}
 	field := "Tenant"
 	value := "cgrates.org"
-	result := msqlStorage.notExtraFieldsValueQry(field, value)
-	expected := fmt.Sprintf(" extra_fields NOT LIKE '%%\"%s\":\"%s\"%%'", field, value)
+	result, params := msqlStorage.notExtraFieldsValueQry(field, value)
+	expected := " extra_fields NOT LIKE ?"
+	expectedParam := fmt.Sprintf("%%\"%s\":\"%s\"%%", field, value)
 	if result != expected {
 		t.Errorf("notExtraFieldsValueQry() = %s; want %s", result, expected)
 	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("notExtraFieldsValueQry() params = %v; want [%s]", params, expectedParam)
+	}
+
 	field = "fieldWith\"SpecialChars"
 	value = "valueWith'SpecialChars"
-	result = msqlStorage.notExtraFieldsValueQry(field, value)
-	expected = fmt.Sprintf(" extra_fields NOT LIKE '%%\"%s\":\"%s\"%%'", field, value)
+	result, params = msqlStorage.notExtraFieldsValueQry(field, value)
+	expectedParam = fmt.Sprintf("%%\"%s\":\"%s\"%%", field, value)
 	if result != expected {
 		t.Errorf("notExtraFieldsValueQry() with special chars = %s; want %s", result, expected)
+	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("notExtraFieldsValueQry() params = %v; want [%s]", params, expectedParam)
 	}
 }
 
 func TestNotExtraFieldsExistsQry(t *testing.T) {
 	msqlStorage := &MySQLStorage{}
 	field := "Tenant"
-	result := msqlStorage.notExtraFieldsExistsQry(field)
-	expected := fmt.Sprintf(" extra_fields NOT LIKE '%%\"%s\":%%'", field)
+	result, params := msqlStorage.notExtraFieldsExistsQry(field)
+	expected := " extra_fields NOT LIKE ?"
+	expectedParam := fmt.Sprintf("%%\"%s\":%%", field)
 	if result != expected {
 		t.Errorf("notExtraFieldsExistsQry() = %s; want %s", result, expected)
 	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("notExtraFieldsExistsQry() params = %v; want [%s]", params, expectedParam)
+	}
+
 	field = "fieldWith\"SpecialChars"
-	result = msqlStorage.notExtraFieldsExistsQry(field)
-	expected = fmt.Sprintf(" extra_fields NOT LIKE '%%\"%s\":%%'", field)
+	result, params = msqlStorage.notExtraFieldsExistsQry(field)
+	expectedParam = fmt.Sprintf("%%\"%s\":%%", field)
 	if result != expected {
 		t.Errorf("notExtraFieldsExistsQry() with special chars = %s; want %s", result, expected)
+	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("notExtraFieldsExistsQry() params = %v; want [%s]", params, expectedParam)
 	}
 }
 
@@ -74,33 +90,49 @@ func TestExtraFieldsValueQry(t *testing.T) {
 	msqlStorage := &MySQLStorage{}
 	field := "Tenant"
 	value := "cgrates.org"
-	result := msqlStorage.extraFieldsValueQry(field, value)
-	expected := fmt.Sprintf(" extra_fields LIKE '%%\"%s\":\"%s\"%%'", field, value)
+	result, params := msqlStorage.extraFieldsValueQry(field, value)
+	expected := " extra_fields LIKE ?"
+	expectedParam := fmt.Sprintf("%%\"%s\":\"%s\"%%", field, value)
 	if result != expected {
 		t.Errorf("extraFieldsValueQry() = %s; want %s", result, expected)
 	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("extraFieldsValueQry() params = %v; want [%s]", params, expectedParam)
+	}
+
 	field = "fieldWith\"SpecialChars"
 	value = "valueWith'SpecialChars"
-	result = msqlStorage.extraFieldsValueQry(field, value)
-	expected = fmt.Sprintf(" extra_fields LIKE '%%\"%s\":\"%s\"%%'", field, value)
+	result, params = msqlStorage.extraFieldsValueQry(field, value)
+	expectedParam = fmt.Sprintf("%%\"%s\":\"%s\"%%", field, value)
 	if result != expected {
 		t.Errorf("extraFieldsValueQry() with special chars = %s; want %s", result, expected)
+	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("extraFieldsValueQry() params = %v; want [%s]", params, expectedParam)
 	}
 }
 
 func TestExtraFieldsExistsQry(t *testing.T) {
 	msqlStorage := &MySQLStorage{}
 	field := "Tenant"
-	result := msqlStorage.extraFieldsExistsQry(field)
-	expected := fmt.Sprintf(" extra_fields LIKE '%%\"%s\":%%'", field)
+	result, params := msqlStorage.extraFieldsExistsQry(field)
+	expected := " extra_fields LIKE ?"
+	expectedParam := fmt.Sprintf("%%\"%s\":%%", field)
 	if result != expected {
 		t.Errorf("extraFieldsExistsQry() = %s; want %s", result, expected)
 	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("extraFieldsExistsQry() params = %v; want [%s]", params, expectedParam)
+	}
+
 	field = "fieldWith\"SpecialChars"
-	result = msqlStorage.extraFieldsExistsQry(field)
-	expected = fmt.Sprintf(" extra_fields LIKE '%%\"%s\":%%'", field)
+	result, params = msqlStorage.extraFieldsExistsQry(field)
+	expectedParam = fmt.Sprintf("%%\"%s\":%%", field)
 	if result != expected {
 		t.Errorf("extraFieldsExistsQry() with special chars = %s; want %s", result, expected)
+	}
+	if len(params) != 1 || params[0] != expectedParam {
+		t.Errorf("extraFieldsExistsQry() params = %v; want [%s]", params, expectedParam)
 	}
 }
 func TestAppendToMysqlDSNOptsBasic(t *testing.T) {
