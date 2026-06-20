@@ -106,20 +106,20 @@ func (poS *PostgresStorage) SetVersions(vrs Versions, overwrite bool) (err error
 	return
 }
 
-func (poS *PostgresStorage) extraFieldsExistsQry(field string) string {
-	return fmt.Sprintf(" extra_fields ?'%s'", field)
+func (poS *PostgresStorage) extraFieldsExistsQry(field string) (string, []any) {
+	return " extra_fields ?? ?", []any{field}
 }
 
-func (poS *PostgresStorage) extraFieldsValueQry(field, value string) string {
-	return fmt.Sprintf(" (extra_fields ->> '%s') = '%s'", field, value)
+func (poS *PostgresStorage) extraFieldsValueQry(field, value string) (string, []any) {
+	return " (extra_fields ->> ?) = ?", []any{field, value}
 }
 
-func (poS *PostgresStorage) notExtraFieldsExistsQry(field string) string {
-	return fmt.Sprintf(" NOT extra_fields ?'%s'", field)
+func (poS *PostgresStorage) notExtraFieldsExistsQry(field string) (string, []any) {
+	return " NOT extra_fields ?? ?", []any{field}
 }
 
-func (poS *PostgresStorage) notExtraFieldsValueQry(field, value string) string {
-	return fmt.Sprintf(" NOT (extra_fields ?'%s' AND (extra_fields ->> '%s') = '%s')", field, field, value)
+func (poS *PostgresStorage) notExtraFieldsValueQry(field, value string) (string, []any) {
+	return " NOT (extra_fields ?? ? AND (extra_fields ->> ?) = ?)", []any{field, field, value}
 }
 
 func (poS *PostgresStorage) GetStorageType() string {

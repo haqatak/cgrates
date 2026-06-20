@@ -97,20 +97,20 @@ func (msqlS *MySQLStorage) SetVersions(vrs Versions, overwrite bool) (err error)
 	return
 }
 
-func (msqlS *MySQLStorage) extraFieldsExistsQry(field string) string {
-	return fmt.Sprintf(" extra_fields LIKE '%%\"%s\":%%'", field)
+func (msqlS *MySQLStorage) extraFieldsExistsQry(field string) (string, []any) {
+	return " extra_fields LIKE ?", []any{fmt.Sprintf("%%\"%s\":%%", field)}
 }
 
-func (msqlS *MySQLStorage) extraFieldsValueQry(field, value string) string {
-	return fmt.Sprintf(" extra_fields LIKE '%%\"%s\":\"%s\"%%'", field, value)
+func (msqlS *MySQLStorage) extraFieldsValueQry(field, value string) (string, []any) {
+	return " extra_fields LIKE ?", []any{fmt.Sprintf("%%\"%s\":\"%s\"%%", field, value)}
 }
 
-func (msqlS *MySQLStorage) notExtraFieldsExistsQry(field string) string {
-	return fmt.Sprintf(" extra_fields NOT LIKE '%%\"%s\":%%'", field)
+func (msqlS *MySQLStorage) notExtraFieldsExistsQry(field string) (string, []any) {
+	return " extra_fields NOT LIKE ?", []any{fmt.Sprintf("%%\"%s\":%%", field)}
 }
 
-func (msqlS *MySQLStorage) notExtraFieldsValueQry(field, value string) string {
-	return fmt.Sprintf(" extra_fields NOT LIKE '%%\"%s\":\"%s\"%%'", field, value)
+func (msqlS *MySQLStorage) notExtraFieldsValueQry(field, value string) (string, []any) {
+	return " extra_fields NOT LIKE ?", []any{fmt.Sprintf("%%\"%s\":\"%s\"%%", field, value)}
 }
 
 func (msqlS *MySQLStorage) GetStorageType() string {
