@@ -39,3 +39,7 @@
 **Vulnerability:** A SQL Injection vulnerability existed in `engine/storage_postgres.go` where the `pgSchema` configuration parameter was directly interpolated into a `SET search_path='%s'` statement without sanitization. An attacker able to control this parameter could inject malicious SQL commands by utilizing single quotes and semicolons.
 **Learning:** In PostgreSQL, `SET` configuration commands do not support parameterized variables. When interpolating dynamic values into single-quoted SQL string literals for these commands, the proper way to sanitize is by escaping single quotes.
 **Prevention:** Prevent SQL injection in non-parameterizable single-quoted string literals by replacing single quotes with two single quotes (e.g., `strings.ReplaceAll(val, "'", "''")`).
+## 2026-05-30 - Math/Rand Use
+**Vulnerability:** The RandomConverter in `utils/dataconverter.go` used the weak, predictable `math/rand` pseudo-random number generator for integer generation.
+**Learning:** For general-purpose dataconverters where the output might be used in security-sensitive contexts (like tokens, IDs, or backoffs), cryptographically secure PRNGs should be used.
+**Prevention:** Replaced `math/rand` calls with `utils.RandomInteger`, which utilizes `crypto/rand`, to ensure robust unpredictability.
